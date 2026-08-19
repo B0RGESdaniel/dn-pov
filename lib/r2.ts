@@ -1,5 +1,33 @@
-// TODO: implementar
-// Client do Cloudflare R2 (S3-compatible, via @aws-sdk/client-s3) usando
-// R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET_NAME.
-// Vai expor a função de upload de objetos (thumbnail + medium) usada pelo
-// script scripts/upload.js.
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+interface UploadObjectProps {
+  key: string;
+  body: Buffer;
+  contentType: string;
+}
+
+export const r2 = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
+
+export async function uploadObject({
+  key,
+  body,
+  contentType,
+}: UploadObjectProps): Promise<string> {
+  await r2.send(
+    new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
+  );
+
+  return `${process.env.R2_PUBLIC_URL}/${key}`;
+}

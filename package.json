@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "dn-pov",
   "version": "0.1.0",
   "private": true,
@@ -7,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "upload": "node scripts/upload.js"
+    "upload": "tsx --env-file=.env.local scripts/upload.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1113.0",
@@ -25,6 +26,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }
