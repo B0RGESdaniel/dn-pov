@@ -112,9 +112,8 @@ export function PhotoScroll({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/90 px-4 py-4 backdrop-blur sm:px-6">
+      <header className="sticky top-12 z-10 border-b border-border bg-background/90 px-4 py-4 backdrop-blur sm:px-6">
         <div className="mb-3 flex items-baseline gap-3">
-          <h1 className="font-display text-lg tracking-tight">dn-pov</h1>
           <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
             {photos.length} fotos{activeCount ? " · filtrado" : ""}
           </span>

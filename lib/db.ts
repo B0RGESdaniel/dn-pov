@@ -61,6 +61,67 @@ export async function upsertTags(inputs: NewTagInput[]): Promise<Tag[]> {
   return tags;
 }
 
+export interface Album {
+  tag: Tag;
+  count: number;
+  cover: {
+    id: number;
+    thumbUrl: string;
+    blurDataUrl: string | null;
+  } | null;
+}
+
+export async function getAlbums(): Promise<Album[]> {
+  const tagsResult = await db.execute(`
+    SELECT t.id, t.name, t.category, t.lat, t.lon, COUNT(pt.photo_id) as count
+    FROM tags t
+    JOIN photo_tags pt ON pt.tag_id = t.id
+    GROUP BY t.id
+    ORDER BY t.category, t.name
+  `);
+
+  const albumsBase = tagsResult.rows.map((row) => ({
+    tag: rowToTag(row as unknown as Record<string, unknown>),
+    count: Number(row.count),
+  }));
+
+  if (albumsBase.length === 0) return [];
+
+  const tagIds = albumsBase.map((album) => album.tag.id);
+  const placeholders = tagIds.map(() => "?").join(", ");
+
+  const coversResult = await db.execute({
+    sql: `
+      SELECT pt.tag_id, p.id, p.thumb_url, p.blur_data_url
+      FROM photo_tags pt
+      JOIN photos p ON p.id = pt.photo_id
+      WHERE pt.tag_id IN (${placeholders})
+      ORDER BY p.id DESC
+    `,
+    args: tagIds,
+  });
+
+  const coverByTag = new Map<
+    number,
+    { id: number; thumbUrl: string; blurDataUrl: string | null }
+  >();
+
+  for (const row of coversResult.rows) {
+    const tagId = row.tag_id as number;
+    if (coverByTag.has(tagId)) continue;
+    coverByTag.set(tagId, {
+      id: row.id as number,
+      thumbUrl: row.thumb_url as string,
+      blurDataUrl: row.blur_data_url as string | null,
+    });
+  }
+
+  return albumsBase.map((album) => ({
+    ...album,
+    cover: coverByTag.get(album.tag.id) ?? null,
+  }));
+}
+
 export async function getTags(): Promise<Tag[]> {
   const result = await db.execute(
     `SELECT id, name, category, lat, lon FROM tags ORDER BY category, name`,

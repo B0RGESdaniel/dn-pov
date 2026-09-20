@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo, Archivo_Black, JetBrains_Mono } from "next/font/google";
+import { SiteNav } from "@/components/site-nav";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${archivo.variable} ${archivoBlack.variable} ${jetBrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
+        <SiteNav />
         {children}
       </body>
     </html>
