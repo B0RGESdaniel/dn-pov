@@ -1,9 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getPhotos } from "@/lib/db";
 
-// TODO: implementar
-// GET /api/photos?tags=viagem,praia&cursor=...
-// Retorna página de fotos filtradas por tag (paginação cursor-based, não offset).
-// Filtro por tag via JOIN no SQL (lib/db.ts), não em memória. Cache na edge.
-export async function GET(_request: NextRequest): Promise<NextResponse> {
-  throw new Error("not implemented");
+// GET /api/photos?place=rio&subject=arquitetura,paisagem&color=azul&cursor=...
+// Cada categoria filtra por OR entre si; categorias diferentes se combinam por AND.
+// Paginação cursor-based (não offset). Filtro via JOIN/EXISTS no SQL (lib/db.ts), não em memória.
+function parseList(value: string | null): string[] | undefined {
+  if (!value) return undefined;
+  return value.split(",").filter(Boolean);
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const { searchParams } = request.nextUrl;
+
+  const place = parseList(searchParams.get("place"));
+  const subject = parseList(searchParams.get("subject"));
+  const color = parseList(searchParams.get("color"));
+  const cursorParam = searchParams.get("cursor");
+  const cursor = cursorParam ? Number(cursorParam) : undefined;
+
+  const page = await getPhotos({ place, subject, color, cursor });
+
+  return NextResponse.json(page, {
+    headers: {
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+    },
+  });
 }
