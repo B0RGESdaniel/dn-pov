@@ -26,6 +26,16 @@ export interface NewTagInput {
   lon?: number | null;
 }
 
+function rowToTag(row: Record<string, unknown>): Tag {
+  return {
+    id: row.id as number,
+    name: row.name as string,
+    category: row.category as TagCategory,
+    lat: row.lat as number | null,
+    lon: row.lon as number | null,
+  };
+}
+
 export async function upsertTags(inputs: NewTagInput[]): Promise<Tag[]> {
   const tags: Tag[] = [];
 
@@ -45,10 +55,20 @@ export async function upsertTags(inputs: NewTagInput[]): Promise<Tag[]> {
       args: [input.name, input.category],
     });
 
-    tags.push(result.rows[0] as unknown as Tag);
+    tags.push(rowToTag(result.rows[0] as unknown as Record<string, unknown>));
   }
 
   return tags;
+}
+
+export async function getTags(): Promise<Tag[]> {
+  const result = await db.execute(
+    `SELECT id, name, category, lat, lon FROM tags ORDER BY category, name`,
+  );
+
+  return result.rows.map((row) =>
+    rowToTag(row as unknown as Record<string, unknown>),
+  );
 }
 
 export async function insertPhoto(data: NewPhoto): Promise<number> {
@@ -177,16 +197,7 @@ export async function getPhotos({
     ...photo,
     tags: tagsResult.rows
       .filter((row) => row.photo_id === photo.id)
-      .map(
-        (row) =>
-          ({
-            id: row.id,
-            name: row.name,
-            category: row.category,
-            lat: row.lat,
-            lon: row.lon,
-          }) as unknown as Tag,
-      ),
+      .map((row) => rowToTag(row as unknown as Record<string, unknown>)),
   }));
 
   return {
