@@ -1,5 +1,5 @@
 import { createClient } from "@libsql/client";
-import { NewPhoto, Photo, PhotosPage, Tag } from "@/types/photo";
+import { NewPhoto, Photo, PhotosPage, Tag, TagCategory } from "@/types/photo";
 
 export const db = createClient({
   url: process.env.TURSO_DATABASE_URL!,
@@ -12,33 +12,49 @@ interface LinkPhotoTagsProps {
 }
 
 interface GetPhotosProps {
-  tags?: string[];
+  place?: string[];
+  subject?: string[];
+  color?: string[];
   cursor?: number;
   limit?: number;
 }
 
-export async function upsertTags(names: string[]): Promise<Tag[]> {
-  for (const name of names) {
+export interface NewTagInput {
+  name: string;
+  category: TagCategory;
+  lat?: number | null;
+  lon?: number | null;
+}
+
+export async function upsertTags(inputs: NewTagInput[]): Promise<Tag[]> {
+  const tags: Tag[] = [];
+
+  for (const input of inputs) {
     await db.execute({
-      sql: `INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO NOTHING`,
-      args: [name],
+      sql: `
+        INSERT INTO tags (name, category, lat, lon) VALUES (?, ?, ?, ?)
+        ON CONFLICT(name, category) DO UPDATE SET
+          lat = COALESCE(excluded.lat, tags.lat),
+          lon = COALESCE(excluded.lon, tags.lon)
+      `,
+      args: [input.name, input.category, input.lat ?? null, input.lon ?? null],
     });
+
+    const result = await db.execute({
+      sql: `SELECT id, name, category, lat, lon FROM tags WHERE name = ? AND category = ?`,
+      args: [input.name, input.category],
+    });
+
+    tags.push(result.rows[0] as unknown as Tag);
   }
 
-  const placeholders = names.map(() => "?").join(", ");
-
-  const result = await db.execute({
-    sql: `SELECT id, name FROM tags WHERE name in (${placeholders})`,
-    args: names,
-  });
-
-  return result.rows as unknown as Tag[];
+  return tags;
 }
 
 export async function insertPhoto(data: NewPhoto): Promise<number> {
   const result = await db.execute({
     sql: `
-      INSERT INTO photos (url, thumb_url, blur_data_url, width, height, taken_at) VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO photos (url, thumb_url, blur_data_url, width, height, taken_at, edited) VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
     args: [
       data.url,
@@ -47,6 +63,7 @@ export async function insertPhoto(data: NewPhoto): Promise<number> {
       data.width,
       data.height,
       data.takenAt,
+      data.edited ? 1 : 0,
     ],
   });
 
@@ -62,17 +79,31 @@ export async function linkPhotoTags({ photoId, tagIds }: LinkPhotoTagsProps) {
   }
 }
 
+function categoryFilterClause(
+  category: TagCategory,
+  names: string[] | undefined,
+): { clause: string; args: (string | number)[] } | null {
+  if (!names || names.length === 0) return null;
+
+  const placeholders = names.map(() => "?").join(", ");
+
+  return {
+    clause: `EXISTS (
+      SELECT 1 FROM photo_tags pt
+      JOIN tags t ON t.id = pt.tag_id
+      WHERE pt.photo_id = photos.id AND t.category = ? AND t.name IN (${placeholders})
+    )`,
+    args: [category, ...names],
+  };
+}
+
 export async function getPhotos({
-  tags,
+  place,
+  subject,
+  color,
   cursor,
   limit = 20,
 }: GetPhotosProps): Promise<PhotosPage> {
-  const hasTagFilter = tags && tags.length > 0;
-
-  const joinClause = hasTagFilter
-    ? `JOIN photo_tags pt ON pt.photo_id = photos.id JOIN tags t ON t.id = pt.tag_id`
-    : "";
-
   const conditions: string[] = [];
   const args: (string | number)[] = [];
 
@@ -81,10 +112,18 @@ export async function getPhotos({
     args.push(cursor);
   }
 
-  if (hasTagFilter) {
-    const placeholders = tags!.map(() => "?").join(", ");
-    conditions.push(`t.name IN (${placeholders})`);
-    args.push(...tags!);
+  const categoryFilters: [TagCategory, string[] | undefined][] = [
+    ["place", place],
+    ["subject", subject],
+    ["color", color],
+  ];
+
+  for (const [category, names] of categoryFilters) {
+    const filter = categoryFilterClause(category, names);
+    if (filter) {
+      conditions.push(filter.clause);
+      args.push(...filter.args);
+    }
   }
 
   args.push(limit + 1);
@@ -93,8 +132,7 @@ export async function getPhotos({
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const sql = `
-    SELECT DISTINCT photos.* FROM photos
-    ${joinClause}
+    SELECT photos.* FROM photos
     ${whereClause}
     ORDER BY photos.id DESC
     LIMIT ?
@@ -112,6 +150,7 @@ export async function getPhotos({
     width: row.width as number | null,
     height: row.height as number | null,
     takenAt: row.taken_at as string | null,
+    edited: Boolean(row.edited),
     createdAt: row.created_at as string,
     tags: [],
   }));
@@ -125,7 +164,7 @@ export async function getPhotos({
     photoIds.length > 0
       ? await db.execute({
           sql: `
-          SELECT pt.photo_id, t.id, t.name
+          SELECT pt.photo_id, t.id, t.name, t.category, t.lat, t.lon
           FROM photo_tags pt
           JOIN tags t ON t.id = pt.tag_id
           WHERE pt.photo_id IN (${tagPlaceholders})
@@ -138,7 +177,16 @@ export async function getPhotos({
     ...photo,
     tags: tagsResult.rows
       .filter((row) => row.photo_id === photo.id)
-      .map((row) => ({ id: row.id, name: row.name }) as Tag),
+      .map(
+        (row) =>
+          ({
+            id: row.id,
+            name: row.name,
+            category: row.category,
+            lat: row.lat,
+            lon: row.lon,
+          }) as unknown as Tag,
+      ),
   }));
 
   return {

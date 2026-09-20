@@ -3,15 +3,44 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 import { uploadObject } from "../lib/r2";
-import { insertPhoto, upsertTags, linkPhotoTags } from "../lib/db";
+import { insertPhoto, upsertTags, linkPhotoTags, NewTagInput } from "../lib/db";
 
 const args = process.argv.slice(2);
 const folder = args[0];
 
-const tagsIndex = args.indexOf("--tags");
-const tags = tagsIndex !== -1 ? args[tagsIndex + 1].split(",") : [];
+function getFlag(name: string): string | undefined {
+  const index = args.indexOf(name);
+  return index !== -1 ? args[index + 1] : undefined;
+}
 
-const tagObjects = await upsertTags(tags);
+function getListFlag(name: string): string[] {
+  const value = getFlag(name);
+  return value ? value.split(",") : [];
+}
+
+const place = getFlag("--place");
+const lat = getFlag("--lat");
+const lon = getFlag("--lon");
+const subjects = getListFlag("--subjects");
+const colors = getListFlag("--color");
+const edited = args.includes("--edited");
+
+const tagInputs: NewTagInput[] = [
+  ...(place
+    ? [
+        {
+          name: place,
+          category: "place" as const,
+          lat: lat ? Number(lat) : null,
+          lon: lon ? Number(lon) : null,
+        },
+      ]
+    : []),
+  ...subjects.map((name) => ({ name, category: "subject" as const })),
+  ...colors.map((name) => ({ name, category: "color" as const })),
+];
+
+const tagObjects = await upsertTags(tagInputs);
 const tagIds = tagObjects.map((tag) => tag.id);
 
 const files = fs.readdirSync(folder);
@@ -67,6 +96,7 @@ for (const file of imageFiles) {
     width: metadata.width,
     height: metadata.height,
     takenAt: null,
+    edited,
   });
 
   await linkPhotoTags({ photoId, tagIds });

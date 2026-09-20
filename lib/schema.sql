@@ -6,12 +6,17 @@ CREATE TABLE photos (
   width INTEGER,
   height INTEGER,
   taken_at TEXT,
+  edited INTEGER NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE tags (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT UNIQUE NOT NULL
+  name TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('place', 'subject', 'color')),
+  lat REAL,
+  lon REAL,
+  UNIQUE (name, category)
 );
 
 CREATE TABLE photo_tags (
