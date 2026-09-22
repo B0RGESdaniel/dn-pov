@@ -104,7 +104,7 @@ Nunca mexe no código do site nem exige redeploy. Não existe upload via web —
 5. ~~Grid + infinite scroll + blur placeholder (`/`)~~
 6. ~~Lightbox~~
 7. ~~Álbuns (`/albuns`)~~
-8. Mapa (`/mapa`) — globo via lib `cobe`, pins a partir de tags de local com lat/lon; sem fotos fixas
+8. ~~Mapa (`/mapa`) — globo via lib `cobe`, pins a partir de tags de local com lat/lon; sem fotos fixas~~
 9. Canvas arrastável/zoom no feed principal (substituindo o grid simples), se fizer sentido depois de usar o app
 10. Cache na edge / revalidação — parcialmente feito (`Cache-Control` na API); revisitar se cache mais agressivo compensar
 
