@@ -15,8 +15,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const place = parseList(searchParams.get("place"));
   const subject = parseList(searchParams.get("subject"));
   const color = parseList(searchParams.get("color"));
-  const cursorParam = searchParams.get("cursor");
-  const cursor = cursorParam ? Number(cursorParam) : undefined;
+  const cursor = searchParams.get("cursor") ?? undefined;
 
   const page = await getPhotos({ place, subject, color, cursor });
 

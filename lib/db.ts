@@ -1,5 +1,10 @@
 import { createClient } from "@libsql/client";
 import { NewPhoto, Photo, PhotosPage, Tag, TagCategory } from "@/types/photo";
+import {
+  decodePhotoCursor,
+  encodePhotoCursor,
+  NULL_DATE_SENTINEL,
+} from "@/lib/photo-cursor";
 
 export const db = createClient({
   url: process.env.TURSO_DATABASE_URL!,
@@ -15,7 +20,7 @@ interface GetPhotosProps {
   place?: string[];
   subject?: string[];
   color?: string[];
-  cursor?: number;
+  cursor?: string;
   limit?: number;
 }
 
@@ -222,8 +227,11 @@ export async function getPhotos({
   const args: (string | number)[] = [];
 
   if (cursor) {
-    conditions.push("photos.id < ?");
-    args.push(cursor);
+    const { takenAt: cursorTakenAt, id: cursorId } = decodePhotoCursor(cursor);
+    conditions.push(
+      `(COALESCE(photos.taken_at, '${NULL_DATE_SENTINEL}'), photos.id) < (?, ?)`,
+    );
+    args.push(cursorTakenAt, cursorId);
   }
 
   const categoryFilters: [TagCategory, string[] | undefined][] = [
@@ -248,7 +256,7 @@ export async function getPhotos({
   const sql = `
     SELECT photos.* FROM photos
     ${whereClause}
-    ORDER BY photos.id DESC
+    ORDER BY COALESCE(photos.taken_at, '${NULL_DATE_SENTINEL}') DESC, photos.id DESC
     LIMIT ?
   `;
 
@@ -269,7 +277,10 @@ export async function getPhotos({
     tags: [],
   }));
 
-  const nextCursor = hasNextPage ? photos[photos.length - 1].id : null;
+  const lastPhoto = photos[photos.length - 1];
+  const nextCursor = hasNextPage
+    ? encodePhotoCursor(lastPhoto.takenAt, lastPhoto.id)
+    : null;
 
   const photoIds = photos.map((p) => p.id);
   const tagPlaceholders = photoIds.map(() => "?").join(", ");
@@ -296,6 +307,6 @@ export async function getPhotos({
 
   return {
     photos: photosWithTags,
-    nextCursor: hasNextPage ? String(nextCursor) : null,
+    nextCursor,
   };
 }
