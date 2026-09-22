@@ -61,23 +61,6 @@ interface TileLayout {
   y: number;
   width: number;
   height: number;
-  rotation: number;
-}
-
-// Jitter/rotação determinísticos por id — não embaralham a cada render.
-// Hash só com operações inteiras (sem Math.sin): funções transcendentais
-// como sin/cos não têm garantia de bater bit-a-bit entre engines/plataformas
-// diferentes, o que causava mismatch de hidratação (servidor x cliente).
-function hashToUnit(seed: number): number {
-  let x = seed | 0;
-  x = Math.imul(x ^ (x >>> 15), 2246822507);
-  x = Math.imul(x ^ (x >>> 13), 3266489909);
-  x ^= x >>> 16;
-  return (x >>> 0) / 4294967296;
-}
-
-function seededJitter(seed: number, range: number): number {
-  return (hashToUnit(seed) - 0.5) * 2 * range;
 }
 
 // Masonry por colunas cronológicas: cada coluna preenche de cima pra baixo
@@ -117,11 +100,10 @@ function layoutMural(
 
     tiles.push({
       photo,
-      x: columnX + seededJitter(photo.id * 3, 10),
-      y: columnY + seededJitter(photo.id * 3 + 1, 10),
+      x: columnX,
+      y: columnY,
       width,
       height,
-      rotation: seededJitter(photo.id * 3 + 2, 3),
     });
 
     columnY += height + GAP;
@@ -175,9 +157,9 @@ export function PhotoMural({
 
   const isMobile = containerSize.width > 0 && containerSize.width < MOBILE_BREAKPOINT;
   const tileLongEdge = isMobile ? TILE_LONG_EDGE_MOBILE : TILE_LONG_EDGE_DESKTOP;
-  // Colunas um pouco mais altas que o viewport: dá um "respiro" vertical pro
-  // drag sem virar um segundo eixo de paginação (só o horizontal carrega mais).
-  const columnHeight = containerSize.height > 0 ? containerSize.height * 1.6 : 800;
+  // Altura da coluna = altura visível: espalha as fotos em várias colunas
+  // (preenchendo a largura da tela) em vez de empilhar muitas numa coluna só.
+  const columnHeight = containerSize.height > 0 ? containerSize.height : 800;
 
   const { tiles, worldWidth } = useMemo(
     () => layoutMural(photos, tileLongEdge, columnHeight),
@@ -394,6 +376,9 @@ export function PhotoMural({
           >
             {tiles.map((tile) => {
               const isVisible = tile.x + tile.width >= viewportLeft && tile.x <= viewportRight;
+              // Acima da dobra na abertura do mural (posição inicial, sem
+              // drag) — evita o aviso de LCP pedindo carregamento eager.
+              const isAboveFold = tile.x < containerSize.width && tile.y < containerSize.height;
               return (
                 <button
                   key={tile.photo.id}
@@ -404,7 +389,6 @@ export function PhotoMural({
                     top: tile.y,
                     width: tile.width,
                     height: tile.height,
-                    transform: `rotate(${tile.rotation}deg)`,
                   }}
                   aria-label={tile.photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
                 >
@@ -418,6 +402,7 @@ export function PhotoMural({
                       placeholder={tile.photo.blurDataUrl ? "blur" : undefined}
                       blurDataURL={tile.photo.blurDataUrl ?? undefined}
                       draggable={false}
+                      priority={isAboveFold}
                     />
                   )}
                 </button>
