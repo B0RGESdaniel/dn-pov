@@ -190,7 +190,13 @@ export function PhotoMural({
   // Posição exibida sempre dentro dos limites atuais — não precisa de efeito
   // pra "corrigir" o state quando o mundo cresce (nova página) ou a tela
   // muda de tamanho, só recalcula no render.
-  const displayX = clamp(translate.x, bounds.minX, bounds.maxX);
+  // Quando o masonry é mais estreito que o container (telas largas ou poucas
+  // fotos), sobra espaço vazio de um lado — em vez de deixar o mural colado
+  // na esquerda, soma um offset fixo pra centralizá-lo. Não interfere no
+  // drag: bounds.minX/maxX já travam translate.x em 0 nesse caso.
+  const centerOffsetX = Math.max(0, (containerSize.width - worldWidth) / 2);
+
+  const displayX = centerOffsetX + clamp(translate.x, bounds.minX, bounds.maxX);
   const displayY = clamp(translate.y, bounds.minY, bounds.maxY);
 
   const loadMore = useCallback(() => {
