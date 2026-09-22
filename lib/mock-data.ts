@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Photo, PhotosPage, Tag, TagCategory } from "@/types/photo";
 import { Album, PlaceAlbum } from "@/lib/db";
+import { decodePhotoCursor, effectiveTakenAt, encodePhotoCursor } from "@/lib/photo-cursor";
 
 // Fonte de dados 100% local pra testar as páginas sem gastar Turso/R2.
 // Lê fotos/info.json (fora do repo, ver .gitignore) e serve as imagens via
@@ -16,11 +17,21 @@ interface MockManifestEntry {
   subjects: string[];
   colors: string[];
   edited: boolean;
+  taken_at?: string;
+  width?: number;
+  height?: number;
 }
 
 function readManifest(): MockManifestEntry[] {
   const raw = fs.readFileSync(path.join(MOCK_DIR, "info.json"), "utf-8");
   return JSON.parse(raw);
+}
+
+// "17/10/2024" -> "2024-10-17" (ordena como string igual à coluna taken_at)
+function parseTakenAt(value: string | undefined): string | null {
+  if (!value) return null;
+  const [day, month, year] = value.split("/");
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
 function buildMockState(): { photos: Photo[]; tags: Tag[] } {
@@ -56,9 +67,9 @@ function buildMockState(): { photos: Photo[]; tags: Tag[] } {
       url,
       thumbUrl: url,
       blurDataUrl: null,
-      width: null,
-      height: null,
-      takenAt: null,
+      width: entry.width ?? null,
+      height: entry.height ?? null,
+      takenAt: parseTakenAt(entry.taken_at),
       edited: entry.edited,
       createdAt: new Date(0).toISOString(),
       tags,
@@ -76,7 +87,7 @@ interface GetMockPhotosProps {
   place?: string[];
   subject?: string[];
   color?: string[];
-  cursor?: number;
+  cursor?: string;
   limit?: number;
 }
 
@@ -98,10 +109,31 @@ export function getMockPhotos({
     return check(place, "place") && check(subject, "subject") && check(color, "color");
   });
 
-  const sorted = [...filtered].sort((a, b) => b.id - a.id);
-  const afterCursor = cursor ? sorted.filter((photo) => photo.id < cursor) : sorted;
+  // Mesma ordem/cursor de lib/db.ts::getPhotos: mais recentes primeiro,
+  // (taken_at, id) como par de comparação — ver lib/photo-cursor.ts.
+  const sorted = [...filtered].sort((a, b) => {
+    const aKey = effectiveTakenAt(a.takenAt);
+    const bKey = effectiveTakenAt(b.takenAt);
+    if (aKey !== bKey) return aKey < bKey ? 1 : -1;
+    return b.id - a.id;
+  });
+
+  const afterCursor = cursor
+    ? (() => {
+        const { takenAt: cursorTakenAt, id: cursorId } = decodePhotoCursor(cursor);
+        return sorted.filter((photo) => {
+          const key = effectiveTakenAt(photo.takenAt);
+          return key < cursorTakenAt || (key === cursorTakenAt && photo.id < cursorId);
+        });
+      })()
+    : sorted;
+
   const page = afterCursor.slice(0, limit);
-  const nextCursor = afterCursor.length > limit ? String(page[page.length - 1].id) : null;
+  const lastPhoto = page[page.length - 1];
+  const nextCursor =
+    afterCursor.length > limit && lastPhoto
+      ? encodePhotoCursor(lastPhoto.takenAt, lastPhoto.id)
+      : null;
 
   return { photos: page, nextCursor };
 }

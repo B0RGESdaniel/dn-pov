@@ -1,5 +1,5 @@
 import { getPhotos, getTags } from "@/lib/photos-source";
-import { PhotoScroll } from "@/components/photo-scroll";
+import { PhotoMural } from "@/components/photo-mural";
 
 function parseList(value: string | string[] | undefined): string[] | undefined {
   if (!value) return undefined;
@@ -22,7 +22,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const filterKey = `${place?.join(",") ?? ""}|${subject?.join(",") ?? ""}|${color?.join(",") ?? ""}`;
 
   return (
-    <PhotoScroll
+    <PhotoMural
       key={filterKey}
       initialPhotos={initialPage.photos}
       initialCursor={initialPage.nextCursor}

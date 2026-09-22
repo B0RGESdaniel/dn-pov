@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect } from "react";
+import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef } from "react";
 import { Photo } from "@/types/photo";
 
 interface LightboxProps {
@@ -11,8 +11,11 @@ interface LightboxProps {
   onNavigate: (index: number) => void;
 }
 
+const SWIPE_THRESHOLD = 50; // px horizontal mínimo pra virar navegação
+
 export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) {
   const photo = photos[index];
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const goNext = useCallback(() => {
     onNavigate((index + 1) % photos.length);
@@ -33,39 +36,37 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose, goNext, goPrev]);
 
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+  }
+
+  function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    const start = pointerStartRef.current;
+    pointerStartRef.current = null;
+    if (!start || photos.length <= 1) return;
+
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    // Ignora se foi mais vertical que horizontal (scroll/toque acidental).
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+
+    if (dx < 0) goNext();
+    else goPrev();
+  }
+
   if (!photo) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur">
-      <div className="flex items-center gap-3 p-4">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
-          {index + 1}/{photos.length}
-        </span>
-        {photo.edited && (
-          <span className="rounded-sm bg-accent px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-background">
-            editada
-          </span>
-        )}
-        <span className="flex-1" />
-        <button
-          onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-foreground hover:bg-black/60"
-          aria-label="Fechar"
-        >
-          ✕
-        </button>
-      </div>
-
-      <div className="relative flex flex-1 items-center justify-center px-4 pb-6">
-        <div
-          className="relative h-full w-full max-w-5xl"
-          style={{
-            aspectRatio:
-              photo.width && photo.height
-                ? `${photo.width} / ${photo.height}`
-                : undefined,
-          }}
-        >
+    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur">
+      <div
+        className="absolute inset-0 touch-none p-4"
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={() => {
+          pointerStartRef.current = null;
+        }}
+      >
+        <div key={photo.id} className="lightbox-photo relative h-full w-full">
           <Image
             src={photo.url}
             alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
@@ -77,25 +78,27 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
             priority
           />
         </div>
+      </div>
 
-        {photos.length > 1 && (
-          <>
-            <button
-              onClick={goPrev}
-              className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-foreground hover:bg-black/60"
-              aria-label="Foto anterior"
-            >
-              ‹
-            </button>
-            <button
-              onClick={goNext}
-              className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-foreground hover:bg-black/60"
-              aria-label="Próxima foto"
-            >
-              ›
-            </button>
-          </>
-        )}
+      {/* Sobreposto à foto (não ocupa espaço em layout), sempre visível. */}
+      <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
+            {index + 1}/{photos.length}
+          </span>
+          {photo.edited && (
+            <span className="rounded-sm bg-accent px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-background">
+              editada
+            </span>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-foreground hover:bg-black/60"
+          aria-label="Fechar"
+        >
+          ✕
+        </button>
       </div>
     </div>
   );
