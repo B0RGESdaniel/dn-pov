@@ -71,23 +71,12 @@ export interface Album {
   } | null;
 }
 
-export async function getAlbums(): Promise<Album[]> {
-  const tagsResult = await db.execute(`
-    SELECT t.id, t.name, t.category, t.lat, t.lon, COUNT(pt.photo_id) as count
-    FROM tags t
-    JOIN photo_tags pt ON pt.tag_id = t.id
-    GROUP BY t.id
-    ORDER BY t.category, t.name
-  `);
+async function attachCovers<T extends { tag: Tag }>(
+  base: T[],
+): Promise<(T & { cover: Album["cover"] })[]> {
+  if (base.length === 0) return [];
 
-  const albumsBase = tagsResult.rows.map((row) => ({
-    tag: rowToTag(row as unknown as Record<string, unknown>),
-    count: Number(row.count),
-  }));
-
-  if (albumsBase.length === 0) return [];
-
-  const tagIds = albumsBase.map((album) => album.tag.id);
+  const tagIds = base.map((item) => item.tag.id);
   const placeholders = tagIds.map(() => "?").join(", ");
 
   const coversResult = await db.execute({
@@ -116,10 +105,54 @@ export async function getAlbums(): Promise<Album[]> {
     });
   }
 
-  return albumsBase.map((album) => ({
-    ...album,
-    cover: coverByTag.get(album.tag.id) ?? null,
+  return base.map((item) => ({
+    ...item,
+    cover: coverByTag.get(item.tag.id) ?? null,
   }));
+}
+
+export async function getAlbums(): Promise<Album[]> {
+  const tagsResult = await db.execute(`
+    SELECT t.id, t.name, t.category, t.lat, t.lon, COUNT(pt.photo_id) as count
+    FROM tags t
+    JOIN photo_tags pt ON pt.tag_id = t.id
+    GROUP BY t.id
+    ORDER BY t.category, t.name
+  `);
+
+  const albumsBase = tagsResult.rows.map((row) => ({
+    tag: rowToTag(row as unknown as Record<string, unknown>),
+    count: Number(row.count),
+  }));
+
+  return attachCovers(albumsBase);
+}
+
+export interface PlaceAlbum {
+  tag: Tag & { lat: number; lon: number };
+  count: number;
+  cover: Album["cover"];
+}
+
+export async function getPlaces(): Promise<PlaceAlbum[]> {
+  const tagsResult = await db.execute(`
+    SELECT t.id, t.name, t.category, t.lat, t.lon, COUNT(pt.photo_id) as count
+    FROM tags t
+    JOIN photo_tags pt ON pt.tag_id = t.id
+    WHERE t.category = 'place' AND t.lat IS NOT NULL AND t.lon IS NOT NULL
+    GROUP BY t.id
+    ORDER BY t.name
+  `);
+
+  const placesBase = tagsResult.rows.map((row) => ({
+    tag: rowToTag(row as unknown as Record<string, unknown>) as Tag & {
+      lat: number;
+      lon: number;
+    },
+    count: Number(row.count),
+  }));
+
+  return attachCovers(placesBase);
 }
 
 export async function getTags(): Promise<Tag[]> {
