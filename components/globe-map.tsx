@@ -1,6 +1,7 @@
 "use client";
 
 import createGlobe, { COBEOptions } from "cobe";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PlaceAlbum } from "@/lib/db";
@@ -12,10 +13,15 @@ interface GlobeMapProps {
 const AUTO_ROTATE_SPEED = 0.0025;
 const DRAG_SENSITIVITY = 0.005;
 const FOCUS_EASING = 0.06;
+const MARKER_SIZE = 0.02; // mesmo valor do showcase "Polaroids" de cobe.vercel.app
 
-// positionAnchor ainda não está no CSSProperties do React/csstype (é uma
-// propriedade CSS recente) — declaramos só o que precisamos além do padrão.
-type AnchorStyle = React.CSSProperties & { positionAnchor?: string };
+// positionAnchor e a custom property --polaroid-rotate ainda não estão no
+// CSSProperties do React/csstype — declaramos só o que precisamos além do
+// padrão.
+type AnchorStyle = React.CSSProperties & {
+  positionAnchor?: string;
+  "--polaroid-rotate"?: string;
+};
 
 // Converte lat/lon em phi/theta pra centralizar o marcador na câmera do cobe.
 function locationToAngles(lat: number, lon: number): [phi: number, theta: number] {
@@ -24,6 +30,15 @@ function locationToAngles(lat: number, lon: number): [phi: number, theta: number
 
 function markerId(placeId: number): string {
   return `place-${placeId}`;
+}
+
+// Rotação determinística do polaroid por local (-6 a 6 graus) — hash
+// inteiro puro (Math.imul), não Math.sin: essa última não é garantida
+// bit-a-bit idêntica entre o Node (SSR) e o browser, o que já causou
+// mismatch de hidratação no mural de fotos.
+function polaroidRotate(placeId: number): number {
+  const hash = Math.imul(placeId, 2654435761) >>> 0;
+  return (hash % 13) - 6;
 }
 
 export function GlobeMap({ places }: GlobeMapProps) {
@@ -39,15 +54,14 @@ export function GlobeMap({ places }: GlobeMapProps) {
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Marcadores invisíveis (size 0) — só existem pra dar ao cobe um id por
-  // local, que ele usa pra gerar os anchors/variáveis CSS (--cobe-<id>,
-  // --cobe-visible-<id>) usados pelas labels HTML abaixo. A label com o
-  // nome é o marcador visível, sem dot separado.
+  // O dot do marcador (size) marca o ponto exato; o cartão polaroid flutua
+  // acima dele. O id é o que o cobe usa pra gerar os anchors/variáveis CSS
+  // (--cobe-<id>, --cobe-visible-<id>) usados pelo polaroid HTML abaixo.
   const markers = useMemo<COBEOptions["markers"]>(
     () =>
       places.map((place) => ({
         location: [place.tag.lat, place.tag.lon] as [number, number],
-        size: 0,
+        size: MARKER_SIZE,
         id: markerId(place.tag.id),
       })),
     [places],
@@ -72,7 +86,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
       scale: 1,
       mapSamples: 16000,
       mapBrightness: 4.5,
-      baseColor: [0.3, 0.3, 0.32],
+      baseColor: [0.45, 0.6, 0.85],
       markerColor: [0.894, 0.863, 0.784],
       glowColor: [0.35, 0.32, 0.28],
       markers,
@@ -216,14 +230,28 @@ export function GlobeMap({ places }: GlobeMapProps) {
                 positionAnchor: `--cobe-${id}`,
                 opacity: `var(--cobe-visible-${id}, 0)`,
                 filter: `blur(var(--cobe-visible-${id}, 10px))`,
+                "--polaroid-rotate": `${polaroidRotate(place.tag.id)}deg`,
               };
               return (
                 <div
                   key={place.tag.id}
-                  className={`globe-marker-label ${isSelected ? "globe-marker-label--selected z-20" : "z-10"}`}
+                  className={`globe-marker-polaroid ${isSelected ? "globe-marker-polaroid--selected z-20" : "z-10"}`}
                   style={style}
                 >
-                  {place.tag.name}
+                  <div className="globe-marker-polaroid-thumb">
+                    {place.cover && (
+                      <Image
+                        src={place.cover.thumbUrl}
+                        alt={place.tag.name}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                        placeholder={place.cover.blurDataUrl ? "blur" : undefined}
+                        blurDataURL={place.cover.blurDataUrl ?? undefined}
+                      />
+                    )}
+                  </div>
+                  <span className="globe-marker-polaroid-caption">{place.tag.name}</span>
                 </div>
               );
             })}

@@ -29,46 +29,52 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Label de local grudada num marcador do globo (cobe), via CSS Anchor
+/* Marcador polaroid grudado num ponto do globo (cobe), via CSS Anchor
    Positioning — o anchor (--cobe-<id>) e a opacidade/blur (--cobe-visible-<id>)
-   vêm de style inline por marcador em components/globe-map.tsx. Visual
-   igual ao showcase "World Cities" de cobe.vercel.app: chip com "rabinho"
-   apontando pro ponto, some com fade + blur quando o local rotaciona pra
-   trás do globo. */
-.globe-marker-label {
+   vêm de style inline por marcador em components/globe-map.tsx. Igual ao
+   showcase "Polaroids" de cobe.vercel.app (mesma técnica de rotate via
+   --polaroid-rotate) — moldura branca de verdade, como uma polaroid física,
+   independente do tema escuro do resto do app. */
+.globe-marker-polaroid {
   position: absolute;
   bottom: anchor(top);
   left: anchor(center);
   translate: -50% 0;
   margin-bottom: 8px;
-  padding: 0.15rem 0.4rem;
-  background: var(--foreground);
-  color: var(--background);
-  font-family: var(--font-jetbrains-mono), monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  transition: opacity 0.8s, filter 0.8s, background 0.15s, color 0.15s;
+  width: 64px;
+  background: #fff;
+  padding: 6px 6px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+  transform: rotate(var(--polaroid-rotate, 0deg));
+  transition: opacity 0.3s, filter 0.3s, box-shadow 0.15s;
   pointer-events: none;
 }
 
-.globe-marker-label::after {
-  content: "";
+.globe-marker-polaroid--selected {
+  box-shadow: 0 0 0 2px var(--accent), 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.globe-marker-polaroid-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #e5e5e5;
+}
+
+.globe-marker-polaroid-caption {
   position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translate3d(-50%, -1px, 0);
-  border: 5px solid transparent;
-  border-top-color: var(--foreground);
-  transition: border-top-color 0.15s;
-}
-
-.globe-marker-label--selected {
-  background: var(--accent);
-  color: var(--background);
-}
-
-.globe-marker-label--selected::after {
-  border-top-color: var(--accent);
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 2px;
 }
