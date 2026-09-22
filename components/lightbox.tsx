@@ -87,16 +87,18 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
           pointerStartRef.current = null;
         }}
       >
-        <Image
-          src={photo.url}
-          alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
-          fill
-          className="object-contain"
-          sizes="100vw"
-          placeholder={photo.blurDataUrl ? "blur" : undefined}
-          blurDataURL={photo.blurDataUrl ?? undefined}
-          priority
-        />
+        <div key={photo.id} className="lightbox-photo absolute inset-0">
+          <Image
+            src={photo.url}
+            alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
+            fill
+            className="object-contain"
+            sizes="100vw"
+            placeholder={photo.blurDataUrl ? "blur" : undefined}
+            blurDataURL={photo.blurDataUrl ?? undefined}
+            priority
+          />
+        </div>
       </div>
     </div>
   );
