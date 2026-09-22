@@ -161,25 +161,20 @@ export function PhotoMural({
 
   return (
     <div className="flex flex-col">
-      <header className="sticky top-12 z-10 border-b border-border bg-background px-4 py-4 sm:px-6">
-        <div className="mb-3 flex items-baseline gap-3">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
-            {photos.length} fotos{activeCount ? " · filtrado" : ""}
-          </span>
-        </div>
-
+      <header className="sticky top-12 z-10 border-b border-border bg-background px-4 py-3 sm:px-6">
         <Drawer open={filtersOpen} onOpenChange={handleFiltersOpenChange} autoFocus>
           <DrawerTrigger asChild>
             <button className="flex w-full items-center justify-between gap-2 rounded-sm border border-border px-3 py-2.5 text-left text-sm text-foreground/80 hover:border-muted">
-              <span className="flex items-center gap-2">
+              <span className="flex shrink-0 items-center gap-2">
                 <span aria-hidden className="leading-none">☰</span>
                 Filtros
               </span>
-              {activeCount > 0 && (
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
-                  · {activeCount} {activeCount === 1 ? "ativo" : "ativos"}
-                </span>
-              )}
+              <span className="min-w-0 truncate font-mono text-[10px] uppercase tracking-widest text-muted">
+                {photos.length} fotos
+                {activeCount > 0
+                  ? ` · ${activeCount} ${activeCount === 1 ? "ativo" : "ativos"}`
+                  : ""}
+              </span>
             </button>
           </DrawerTrigger>
 
