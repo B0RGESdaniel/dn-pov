@@ -11,9 +11,7 @@ interface LightboxProps {
   onNavigate: (index: number) => void;
 }
 
-// px de deslocamento horizontal mínimo pra contar como swipe (em vez de um
-// toque/scroll vertical acidental).
-const SWIPE_THRESHOLD = 50;
+const SWIPE_THRESHOLD = 50; // px horizontal mínimo pra virar navegação
 
 export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) {
   const photo = photos[index];
@@ -59,35 +57,16 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
   if (!photo) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur">
-      <div className="flex items-center gap-3 p-4">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
-          {index + 1}/{photos.length}
-        </span>
-        {photo.edited && (
-          <span className="rounded-sm bg-accent px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-background">
-            editada
-          </span>
-        )}
-        <span className="flex-1" />
-        <button
-          onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-foreground hover:bg-black/60"
-          aria-label="Fechar"
-        >
-          ✕
-        </button>
-      </div>
-
+    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur">
       <div
-        className="relative mx-auto w-full max-w-5xl flex-1 touch-none px-4 pb-6"
+        className="absolute inset-0 touch-none p-4"
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerCancel={() => {
           pointerStartRef.current = null;
         }}
       >
-        <div key={photo.id} className="lightbox-photo absolute inset-0">
+        <div key={photo.id} className="lightbox-photo relative h-full w-full">
           <Image
             src={photo.url}
             alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
@@ -99,6 +78,27 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
             priority
           />
         </div>
+      </div>
+
+      {/* Sobreposto à foto (não ocupa espaço em layout), sempre visível. */}
+      <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
+            {index + 1}/{photos.length}
+          </span>
+          {photo.edited && (
+            <span className="rounded-sm bg-accent px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-background">
+              editada
+            </span>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-foreground hover:bg-black/60"
+          aria-label="Fechar"
+        >
+          ✕
+        </button>
       </div>
     </div>
   );
