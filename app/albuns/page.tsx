@@ -1,4 +1,4 @@
-import { getAlbums } from "@/lib/db";
+import { getAlbums } from "@/lib/photos-source";
 import { AlbumGrid } from "@/components/album-grid";
 
 export default async function AlbunsPage() {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPhotos } from "@/lib/db";
+import { getPhotos } from "@/lib/photos-source";
 
 // GET /api/photos?place=rio&subject=arquitetura,paisagem&color=azul&cursor=...
 // Cada categoria filtra por OR entre si; categorias diferentes se combinam por AND.

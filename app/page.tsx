@@ -1,4 +1,4 @@
-import { getPhotos, getTags } from "@/lib/db";
+import { getPhotos, getTags } from "@/lib/photos-source";
 import { PhotoScroll } from "@/components/photo-scroll";
 
 function parseList(value: string | string[] | undefined): string[] | undefined {

@@ -1,4 +1,4 @@
-import { getPlaces } from "@/lib/db";
+import { getPlaces } from "@/lib/photos-source";
 import { GlobeMap } from "@/components/globe-map";
 
 export default async function MapaPage() {
