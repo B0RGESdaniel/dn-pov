@@ -43,10 +43,12 @@ function buildQuery(filters: ActiveFilters): string {
   return query ? `?${query}` : "";
 }
 
-// Tamanho fixo do lado maior de cada foto — não muda com a quantidade de
-// fotos no acervo (sem "zoom out"), só o mural fica fisicamente maior.
-const TILE_LONG_EDGE_DESKTOP = 260;
-const TILE_LONG_EDGE_MOBILE = 160;
+// Largura fixa de cada foto — não muda com a quantidade de fotos no acervo
+// (sem "zoom out"), só o mural fica fisicamente maior. A altura varia com a
+// proporção original de cada foto, então toda coluna tem a mesma largura e
+// o gap fica idêntico nos dois eixos.
+const TILE_WIDTH_DESKTOP = 260;
+const TILE_WIDTH_MOBILE = 160;
 const MOBILE_BREAKPOINT = 640;
 const GAP = 14;
 const LOAD_THRESHOLD = 800; // px de distância da borda esquerda pra buscar mais
@@ -65,36 +67,26 @@ interface TileLayout {
 
 // Masonry por colunas cronológicas: cada coluna preenche de cima pra baixo
 // até estourar a altura fixa, aí a próxima foto começa uma nova coluna à
-// direita. Cada foto mantém a proporção original (só o lado maior é fixo).
+// direita. Toda coluna tem a mesma largura (tileWidth) — só a altura de
+// cada foto varia, respeitando a proporção original.
 function layoutMural(
   photos: Photo[],
-  tileLongEdge: number,
+  tileWidth: number,
   columnHeight: number,
 ): { tiles: TileLayout[]; worldWidth: number } {
   const tiles: TileLayout[] = [];
   let columnX = 0;
   let columnY = 0;
-  let columnWidth = 0;
   let columnHasTiles = false;
 
   for (const photo of photos) {
     const naturalWidth = photo.width ?? 1;
     const naturalHeight = photo.height ?? 1;
-    const isPortrait = naturalHeight >= naturalWidth;
-    const shortEdge = Math.max(
-      40,
-      Math.round(
-        (tileLongEdge * Math.min(naturalWidth, naturalHeight)) /
-          Math.max(naturalWidth, naturalHeight),
-      ),
-    );
-    const width = isPortrait ? shortEdge : tileLongEdge;
-    const height = isPortrait ? tileLongEdge : shortEdge;
+    const height = Math.max(40, Math.round((tileWidth * naturalHeight) / naturalWidth));
 
     if (columnHasTiles && columnY + height > columnHeight) {
-      columnX += columnWidth + GAP;
+      columnX += tileWidth + GAP;
       columnY = 0;
-      columnWidth = 0;
       columnHasTiles = false;
     }
 
@@ -102,16 +94,15 @@ function layoutMural(
       photo,
       x: columnX,
       y: columnY,
-      width,
+      width: tileWidth,
       height,
     });
 
     columnY += height + GAP;
-    columnWidth = Math.max(columnWidth, width);
     columnHasTiles = true;
   }
 
-  return { tiles, worldWidth: columnX + columnWidth };
+  return { tiles, worldWidth: columnX + tileWidth };
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -156,14 +147,14 @@ export function PhotoMural({
   }, []);
 
   const isMobile = containerSize.width > 0 && containerSize.width < MOBILE_BREAKPOINT;
-  const tileLongEdge = isMobile ? TILE_LONG_EDGE_MOBILE : TILE_LONG_EDGE_DESKTOP;
+  const tileWidth = isMobile ? TILE_WIDTH_MOBILE : TILE_WIDTH_DESKTOP;
   // Altura da coluna = altura visível: espalha as fotos em várias colunas
   // (preenchendo a largura da tela) em vez de empilhar muitas numa coluna só.
   const columnHeight = containerSize.height > 0 ? containerSize.height : 800;
 
   const { tiles, worldWidth } = useMemo(
-    () => layoutMural(photos, tileLongEdge, columnHeight),
-    [photos, tileLongEdge, columnHeight],
+    () => layoutMural(photos, tileWidth, columnHeight),
+    [photos, tileWidth, columnHeight],
   );
 
   const bounds = useMemo(
