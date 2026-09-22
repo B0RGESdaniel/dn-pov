@@ -56,27 +56,17 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
         </button>
       </div>
 
-      <div className="relative flex flex-1 items-center justify-center px-4 pb-6">
-        <div
-          className="relative h-full w-full max-w-5xl"
-          style={{
-            aspectRatio:
-              photo.width && photo.height
-                ? `${photo.width} / ${photo.height}`
-                : undefined,
-          }}
-        >
-          <Image
-            src={photo.url}
-            alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
-            fill
-            className="object-contain"
-            sizes="100vw"
-            placeholder={photo.blurDataUrl ? "blur" : undefined}
-            blurDataURL={photo.blurDataUrl ?? undefined}
-            priority
-          />
-        </div>
+      <div className="relative mx-auto w-full max-w-5xl flex-1 px-4 pb-6">
+        <Image
+          src={photo.url}
+          alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
+          fill
+          className="object-contain"
+          sizes="100vw"
+          placeholder={photo.blurDataUrl ? "blur" : undefined}
+          blurDataURL={photo.blurDataUrl ?? undefined}
+          priority
+        />
 
         {photos.length > 1 && (
           <>
