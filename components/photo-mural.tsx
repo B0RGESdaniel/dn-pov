@@ -51,11 +51,14 @@ const TILE_WIDTH_DESKTOP = 260;
 const TILE_WIDTH_MOBILE = 160;
 const MOBILE_BREAKPOINT = 640;
 const GAP = 14;
-const LOAD_THRESHOLD = 800; // px de distância da borda esquerda pra buscar mais
+const LOAD_THRESHOLD = 800; // px de distância da borda inferior pra buscar mais
 const RENDER_BUFFER = 400; // margem além do viewport visível pra manter montado
 const DRAG_CLICK_THRESHOLD = 6; // px de movimento total pra não contar como clique
 const INERTIA_DECAY = 0.94;
 const INERTIA_STOP_SPEED = 0.5;
+// Fotos landscape ocupam 2 colunas adjacentes (em vez de achatar pra caber
+// em 1), mantendo a proporção original sem esticar/cortar.
+const LANDSCAPE_SPAN = 2;
 
 interface TileLayout {
   photo: Photo;
@@ -65,44 +68,56 @@ interface TileLayout {
   height: number;
 }
 
-// Masonry por colunas cronológicas: cada coluna preenche de cima pra baixo
-// até estourar a altura fixa, aí a próxima foto começa uma nova coluna à
-// direita. Toda coluna tem a mesma largura (tileWidth) — só a altura de
-// cada foto varia, respeitando a proporção original.
+// Masonry de colunas cronológicas com largura fixa: o número de colunas é
+// definido pela largura da tela (numColumns), sem limite de altura — o
+// mural cresce pra baixo (tempo) conforme mais fotos entram. Fotos landscape
+// ocupam 2 colunas adjacentes. Cada foto entra na coluna (ou par) com menos
+// altura ocupada até agora — masonry clássico, tipo Pinterest.
 function layoutMural(
   photos: Photo[],
   tileWidth: number,
-  columnHeight: number,
-): { tiles: TileLayout[]; worldWidth: number } {
+  numColumns: number,
+): { tiles: TileLayout[]; worldHeight: number } {
   const tiles: TileLayout[] = [];
-  let columnX = 0;
-  let columnY = 0;
-  let columnHasTiles = false;
+  const columnBottoms = new Array(Math.max(1, numColumns)).fill(0);
+  // Ponto onde a busca por coluna começa, avançando a cada foto (rodízio).
+  // Sem isso, empates de altura sempre favorecem a coluna de índice mais
+  // baixo, e alguma coluna do meio pode ficar sem ser escolhida por muito
+  // tempo mesmo tendo espaço livre.
+  let scanCursor = 0;
+
+  function columnX(index: number): number {
+    return index * (tileWidth + GAP);
+  }
 
   for (const photo of photos) {
     const naturalWidth = photo.width ?? 1;
     const naturalHeight = photo.height ?? 1;
-    const height = Math.max(40, Math.round((tileWidth * naturalHeight) / naturalWidth));
+    const maxSpan = Math.min(LANDSCAPE_SPAN, columnBottoms.length);
+    const span = naturalWidth > naturalHeight ? maxSpan : 1;
+    const renderWidth = span * tileWidth + (span - 1) * GAP;
+    const height = Math.max(40, Math.round((renderWidth * naturalHeight) / naturalWidth));
 
-    if (columnHasTiles && columnY + height > columnHeight) {
-      columnX += tileWidth + GAP;
-      columnY = 0;
-      columnHasTiles = false;
+    const maxStart = columnBottoms.length - span;
+    let bestColumn = 0;
+    let bestBottom = Infinity;
+    for (let offset = 0; offset <= maxStart; offset++) {
+      const start = (scanCursor + offset) % (maxStart + 1);
+      const groupBottom = Math.max(...columnBottoms.slice(start, start + span));
+      if (groupBottom < bestBottom) {
+        bestBottom = groupBottom;
+        bestColumn = start;
+      }
     }
+    scanCursor = (bestColumn + span) % (maxStart + 1);
 
-    tiles.push({
-      photo,
-      x: columnX,
-      y: columnY,
-      width: tileWidth,
-      height,
-    });
+    tiles.push({ photo, x: columnX(bestColumn), y: bestBottom, width: renderWidth, height });
 
-    columnY += height + GAP;
-    columnHasTiles = true;
+    const newBottom = bestBottom + height + GAP;
+    for (let i = bestColumn; i < bestColumn + span; i++) columnBottoms[i] = newBottom;
   }
 
-  return { tiles, worldWidth: columnX + tileWidth };
+  return { tiles, worldHeight: Math.max(0, ...columnBottoms) };
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -148,23 +163,28 @@ export function PhotoMural({
 
   const isMobile = containerSize.width > 0 && containerSize.width < MOBILE_BREAKPOINT;
   const tileWidth = isMobile ? TILE_WIDTH_MOBILE : TILE_WIDTH_DESKTOP;
-  // Altura da coluna = altura visível: espalha as fotos em várias colunas
-  // (preenchendo a largura da tela) em vez de empilhar muitas numa coluna só.
-  const columnHeight = containerSize.height > 0 ? containerSize.height : 800;
+  // Número de colunas cabendo na largura visível — o mural não tem "zoom
+  // out", então quando a tela é mais estreita que uma coluna ainda mostra 1.
+  const numColumns =
+    containerSize.width > 0
+      ? Math.max(1, Math.floor((containerSize.width + GAP) / (tileWidth + GAP)))
+      : 1;
 
-  const { tiles, worldWidth } = useMemo(
-    () => layoutMural(photos, tileWidth, columnHeight),
-    [photos, tileWidth, columnHeight],
+  const { tiles, worldHeight } = useMemo(
+    () => layoutMural(photos, tileWidth, numColumns),
+    [photos, tileWidth, numColumns],
   );
+
+  const worldWidth = numColumns * tileWidth + (numColumns - 1) * GAP;
 
   const bounds = useMemo(
     () => ({
       minX: Math.min(0, containerSize.width - worldWidth),
       maxX: 0,
-      minY: Math.min(0, containerSize.height - columnHeight),
+      minY: Math.min(0, containerSize.height - worldHeight),
       maxY: 0,
     }),
-    [containerSize, worldWidth, columnHeight],
+    [containerSize, worldWidth, worldHeight],
   );
 
   // Posição exibida sempre dentro dos limites atuais — não precisa de efeito
@@ -192,15 +212,15 @@ export function PhotoMural({
       .finally(() => setIsLoadingMore(false));
   }, [activeFilters, cursor, isLoadingMore]);
 
-  // Perto da borda esquerda (mais fotos antigas) e ainda tem o que buscar.
+  // Perto da borda inferior (mais fotos antigas) e ainda tem o que buscar.
   // Roda num frame separado (não direto no corpo do efeito) pra não
   // encadear um setState síncrono dentro do próprio efeito.
   useEffect(() => {
     if (!cursor || isLoadingMore) return;
-    if (displayX - bounds.minX > LOAD_THRESHOLD) return;
+    if (displayY - bounds.minY > LOAD_THRESHOLD) return;
     const frame = requestAnimationFrame(() => loadMore());
     return () => cancelAnimationFrame(frame);
-  }, [displayX, bounds.minX, cursor, isLoadingMore, loadMore]);
+  }, [displayY, bounds.minY, cursor, isLoadingMore, loadMore]);
 
   function stopInertia() {
     if (inertiaFrameRef.current !== null) {
@@ -293,8 +313,8 @@ export function PhotoMural({
     (activeFilters.subject?.length ?? 0) +
     (activeFilters.color?.length ?? 0);
 
-  const viewportLeft = -displayX - RENDER_BUFFER;
-  const viewportRight = -displayX + containerSize.width + RENDER_BUFFER;
+  const viewportTop = -displayY - RENDER_BUFFER;
+  const viewportBottom = -displayY + containerSize.height + RENDER_BUFFER;
 
   return (
     <div className="flex h-[calc(100dvh-3rem)] flex-col">
@@ -366,10 +386,10 @@ export function PhotoMural({
             style={{ transform: `translate3d(${displayX}px, ${displayY}px, 0)` }}
           >
             {tiles.map((tile) => {
-              const isVisible = tile.x + tile.width >= viewportLeft && tile.x <= viewportRight;
+              const isVisible = tile.y + tile.height >= viewportTop && tile.y <= viewportBottom;
               // Acima da dobra na abertura do mural (posição inicial, sem
               // drag) — evita o aviso de LCP pedindo carregamento eager.
-              const isAboveFold = tile.x < containerSize.width && tile.y < containerSize.height;
+              const isAboveFold = tile.y < containerSize.height;
               return (
                 <button
                   key={tile.photo.id}
