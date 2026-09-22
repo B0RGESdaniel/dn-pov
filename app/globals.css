@@ -28,3 +28,47 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Label de local grudada num marcador do globo (cobe), via CSS Anchor
+   Positioning — o anchor (--cobe-<id>) e a opacidade/blur (--cobe-visible-<id>)
+   vêm de style inline por marcador em components/globe-map.tsx. Visual
+   igual ao showcase "World Cities" de cobe.vercel.app: chip com "rabinho"
+   apontando pro ponto, some com fade + blur quando o local rotaciona pra
+   trás do globo. */
+.globe-marker-label {
+  position: absolute;
+  bottom: anchor(top);
+  left: anchor(center);
+  translate: -50% 0;
+  margin-bottom: 8px;
+  padding: 0.15rem 0.4rem;
+  background: var(--foreground);
+  color: var(--background);
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: opacity 0.8s, filter 0.8s, background 0.15s, color 0.15s;
+  pointer-events: none;
+}
+
+.globe-marker-label::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate3d(-50%, -1px, 0);
+  border: 5px solid transparent;
+  border-top-color: var(--foreground);
+  transition: border-top-color 0.15s;
+}
+
+.globe-marker-label--selected {
+  background: var(--accent);
+  color: var(--background);
+}
+
+.globe-marker-label--selected::after {
+  border-top-color: var(--accent);
+}
