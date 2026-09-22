@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/", label: "scroll" },
+  { href: "/", label: "mural" },
   { href: "/albuns", label: "álbuns" },
   { href: "/mapa", label: "mapa" },
 ];
