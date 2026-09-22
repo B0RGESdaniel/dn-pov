@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect } from "react";
+import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef } from "react";
 import { Photo } from "@/types/photo";
 
 interface LightboxProps {
@@ -11,8 +11,13 @@ interface LightboxProps {
   onNavigate: (index: number) => void;
 }
 
+// px de deslocamento horizontal mínimo pra contar como swipe (em vez de um
+// toque/scroll vertical acidental).
+const SWIPE_THRESHOLD = 50;
+
 export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) {
   const photo = photos[index];
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const goNext = useCallback(() => {
     onNavigate((index + 1) % photos.length);
@@ -32,6 +37,24 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose, goNext, goPrev]);
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+  }
+
+  function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    const start = pointerStartRef.current;
+    pointerStartRef.current = null;
+    if (!start || photos.length <= 1) return;
+
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    // Ignora se foi mais vertical que horizontal (scroll/toque acidental).
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+
+    if (dx < 0) goNext();
+    else goPrev();
+  }
 
   if (!photo) return null;
 
@@ -56,7 +79,14 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
         </button>
       </div>
 
-      <div className="relative mx-auto w-full max-w-5xl flex-1 px-4 pb-6">
+      <div
+        className="relative mx-auto w-full max-w-5xl flex-1 touch-none px-4 pb-6"
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={() => {
+          pointerStartRef.current = null;
+        }}
+      >
         <Image
           src={photo.url}
           alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
@@ -67,25 +97,6 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
           blurDataURL={photo.blurDataUrl ?? undefined}
           priority
         />
-
-        {photos.length > 1 && (
-          <>
-            <button
-              onClick={goPrev}
-              className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-foreground hover:bg-black/60"
-              aria-label="Foto anterior"
-            >
-              ‹
-            </button>
-            <button
-              onClick={goNext}
-              className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-foreground hover:bg-black/60"
-              aria-label="Próxima foto"
-            >
-              ›
-            </button>
-          </>
-        )}
       </div>
     </div>
   );
