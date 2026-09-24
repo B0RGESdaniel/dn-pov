@@ -10,7 +10,7 @@ interface GlobeMapProps {
   places: PlaceAlbum[];
 }
 
-const AUTO_ROTATE_SPEED = 0.0025;
+const AUTO_ROTATE_SPEED = 0.001;
 const DRAG_SENSITIVITY = 0.005;
 const FOCUS_EASING = 0.06;
 const MARKER_SIZE = 0.02; // mesmo valor do showcase "Polaroids" de cobe.vercel.app
@@ -24,8 +24,14 @@ type AnchorStyle = React.CSSProperties & {
 };
 
 // Converte lat/lon em phi/theta pra centralizar o marcador na câmera do cobe.
-function locationToAngles(lat: number, lon: number): [phi: number, theta: number] {
-  return [Math.PI - ((lon * Math.PI) / 180 - Math.PI / 2), (lat * Math.PI) / 180];
+function locationToAngles(
+  lat: number,
+  lon: number,
+): [phi: number, theta: number] {
+  return [
+    Math.PI - ((lon * Math.PI) / 180 - Math.PI / 2),
+    (lat * Math.PI) / 180,
+  ];
 }
 
 function markerId(placeId: number): string {
@@ -89,6 +95,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
       baseColor: [0.45, 0.6, 0.85],
       markerColor: [0.894, 0.863, 0.784],
       glowColor: [0.35, 0.32, 0.28],
+      markerElevation: 0,
       markers,
     });
 
@@ -98,7 +105,8 @@ export function GlobeMap({ places }: GlobeMapProps) {
     let frameId = requestAnimationFrame(function animate() {
       if (!pointerRef.current.down) {
         if (targetRef.current) {
-          phiRef.current += (targetRef.current.phi - phiRef.current) * FOCUS_EASING;
+          phiRef.current +=
+            (targetRef.current.phi - phiRef.current) * FOCUS_EASING;
           thetaRef.current +=
             (targetRef.current.theta - thetaRef.current) * FOCUS_EASING;
           if (
@@ -168,7 +176,8 @@ export function GlobeMap({ places }: GlobeMapProps) {
     targetRef.current = { phi, theta };
   }
 
-  const selectedPlace = places.find((place) => place.tag.id === selectedId) ?? null;
+  const selectedPlace =
+    places.find((place) => place.tag.id === selectedId) ?? null;
 
   return (
     <div className="flex h-[calc(100dvh-3rem)] flex-col">
@@ -195,7 +204,9 @@ export function GlobeMap({ places }: GlobeMapProps) {
                   }`}
                 >
                   {place.tag.name}
-                  <span className="ml-1.5 font-mono text-[9px] opacity-70">{place.count}</span>
+                  <span className="ml-1.5 font-mono text-[9px] opacity-70">
+                    {place.count}
+                  </span>
                 </button>
               );
             })}
@@ -246,12 +257,16 @@ export function GlobeMap({ places }: GlobeMapProps) {
                         fill
                         className="object-cover"
                         sizes="64px"
-                        placeholder={place.cover.blurDataUrl ? "blur" : undefined}
+                        placeholder={
+                          place.cover.blurDataUrl ? "blur" : undefined
+                        }
                         blurDataURL={place.cover.blurDataUrl ?? undefined}
                       />
                     )}
                   </div>
-                  <span className="globe-marker-polaroid-caption">{place.tag.name}</span>
+                  <span className="globe-marker-polaroid-caption">
+                    {place.tag.name}
+                  </span>
                 </div>
               );
             })}
