@@ -40,10 +40,10 @@ body {
   bottom: anchor(top);
   left: anchor(center);
   translate: -50% 0;
-  margin-bottom: 8px;
-  width: 64px;
+  margin-bottom: 6px;
+  width: 40px;
   background: #fff;
-  padding: 6px 6px 20px;
+  padding: 4px 4px 14px;
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.45),
     0 1px 2px rgba(0, 0, 0, 0.3);
@@ -53,6 +53,14 @@ body {
     filter 0.3s,
     box-shadow 0.15s;
   pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .globe-marker-polaroid {
+    margin-bottom: 8px;
+    width: 64px;
+    padding: 6px 6px 20px;
+  }
 }
 
 .globe-marker-polaroid--selected {
@@ -71,12 +79,12 @@ body {
 
 .globe-marker-polaroid-caption {
   position: absolute;
-  bottom: 4px;
+  bottom: 2px;
   left: 0;
   right: 0;
   text-align: center;
   font-family: var(--font-jetbrains-mono), monospace;
-  font-size: 0.5rem;
+  font-size: 0.375rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #333;
@@ -84,6 +92,13 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0 2px;
+}
+
+@media (min-width: 768px) {
+  .globe-marker-polaroid-caption {
+    bottom: 4px;
+    font-size: 0.5rem;
+  }
 }
 
 /* Transição leve ao trocar de foto na lightbox — disparada remontando o

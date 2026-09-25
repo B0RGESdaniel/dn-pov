@@ -379,7 +379,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
                           alt={place.tag.name}
                           fill
                           className="object-cover"
-                          sizes="64px"
+                          sizes="(min-width: 768px) 64px, 40px"
                           placeholder={
                             place.cover.blurDataUrl ? "blur" : undefined
                           }
