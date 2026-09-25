@@ -59,11 +59,14 @@ function regionForPlace(lat: number, lon: number): Region {
   if (lat >= -35 && lat <= 38 && lon >= -18 && lon <= 52) return "africa";
   if (lat >= -50 && lat <= 25 && lon >= 110 && lon <= 180) return "oceania";
   if (lat >= -56 && lat <= 13 && lon >= -82 && lon <= -34) return "america-sul";
-  if (lat >= 5 && lat <= 84 && lon >= -170 && lon <= -50) return "america-norte";
+  if (lat >= 5 && lat <= 84 && lon >= -170 && lon <= -50)
+    return "america-norte";
   return "asia";
 }
 
-function regionCentroid(regionPlaces: PlaceAlbum[]): [lat: number, lon: number] {
+function regionCentroid(
+  regionPlaces: PlaceAlbum[],
+): [lat: number, lon: number] {
   const lat =
     regionPlaces.reduce((sum, place) => sum + place.tag.lat, 0) /
     regionPlaces.length;
@@ -115,6 +118,10 @@ export function GlobeMap({ places }: GlobeMapProps) {
   const targetRef = useRef<{ phi: number; theta: number } | null>(null);
   const scaleRef = useRef(NORMAL_SCALE);
   const targetScaleRef = useRef(NORMAL_SCALE);
+  // Enquanto uma região está com zoom, o auto-rotate fica suspenso mesmo
+  // depois do giro chegar no alvo — só volta a girar quando o zoom é
+  // desfeito (handleResetZoom), não sozinho como o foco num local avulso.
+  const rotationLockedRef = useRef(false);
   const pointerRef = useRef({ down: false, x: 0, y: 0 });
   const widthRef = useRef(560);
 
@@ -184,12 +191,13 @@ export function GlobeMap({ places }: GlobeMapProps) {
           thetaRef.current +=
             (targetRef.current.theta - thetaRef.current) * FOCUS_EASING;
           if (
+            !rotationLockedRef.current &&
             Math.abs(targetRef.current.phi - phiRef.current) < 0.001 &&
             Math.abs(targetRef.current.theta - thetaRef.current) < 0.001
           ) {
             targetRef.current = null;
           }
-        } else {
+        } else if (!rotationLockedRef.current) {
           phiRef.current += AUTO_ROTATE_SPEED;
         }
       }
@@ -258,12 +266,15 @@ export function GlobeMap({ places }: GlobeMapProps) {
     const [phi, theta] = locationToAngles(lat, lon);
     targetRef.current = { phi, theta };
     targetScaleRef.current = REGION_ZOOM_SCALE;
+    rotationLockedRef.current = true;
     setZoomedRegion(region);
     setSelectedId(null);
   }
 
   function handleResetZoom() {
     targetScaleRef.current = NORMAL_SCALE;
+    rotationLockedRef.current = false;
+    targetRef.current = null;
     setZoomedRegion(null);
   }
 
@@ -345,7 +356,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
           <div className="relative order-1 flex flex-1 items-center justify-center overflow-hidden px-4 py-6 sm:px-6 md:order-2">
             <div
               ref={wrapperRef}
-              className="relative aspect-square w-full max-w-[640px] touch-none"
+              className="relative aspect-square w-full max-w-160 touch-none"
             >
               <canvas
                 ref={canvasRef}
