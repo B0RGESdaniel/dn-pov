@@ -5,6 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PlaceAlbum } from "@/lib/db";
+import {
+  Carousel,
+  CarouselApi,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 
 interface GlobeMapProps {
   places: PlaceAlbum[];
@@ -127,6 +133,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [zoomedRegion, setZoomedRegion] = useState<Region | null>(null);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
 
   const regionGroups = useMemo(() => {
     const groups = new Map<Region, PlaceAlbum[]>();
@@ -230,10 +237,45 @@ export function GlobeMap({ places }: GlobeMapProps) {
     globeRef.current?.update({ markers });
   }, [markers]);
 
+  // Só gira o globo até o local e marca a seleção — não mexe no carrossel.
+  // Usado tanto por quem inicia a seleção fora do carrossel (clique num
+  // marcador) quanto pelo próprio evento "select" do carrossel, que já
+  // rolou sozinho.
+  function focusPlace(place: PlaceAlbum) {
+    setSelectedId(place.tag.id);
+    const [phi, theta] = locationToAngles(place.tag.lat, place.tag.lon);
+    targetRef.current = { phi, theta };
+  }
+
+  // Clique num marcador do globo ou num card do carrossel: foca o local e
+  // garante que o carrossel também role até o card correspondente.
+  function selectPlace(place: PlaceAlbum) {
+    focusPlace(place);
+    const index = places.findIndex((item) => item.tag.id === place.tag.id);
+    if (index !== -1) carouselApi?.scrollTo(index);
+  }
+
+  // Sincroniza a partir do carrossel: tanto o estado inicial (local em foco
+  // assim que a API do Embla fica disponível) quanto qualquer troca de slide
+  // por arrasto/teclado do próprio usuário.
+  useEffect(() => {
+    if (!carouselApi || places.length === 0) return;
+
+    function handleSelect() {
+      const place = places[carouselApi!.selectedScrollSnap()];
+      if (place) focusPlace(place);
+    }
+
+    handleSelect();
+    carouselApi.on("select", handleSelect);
+    return () => {
+      carouselApi.off("select", handleSelect);
+    };
+  }, [carouselApi, places]);
+
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
     pointerRef.current = { down: true, x: event.clientX, y: event.clientY };
     targetRef.current = null;
-    setSelectedId(null);
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -255,12 +297,6 @@ export function GlobeMap({ places }: GlobeMapProps) {
     );
   }
 
-  function handleSelect(place: PlaceAlbum) {
-    setSelectedId(place.tag.id);
-    const [phi, theta] = locationToAngles(place.tag.lat, place.tag.lon);
-    targetRef.current = { phi, theta };
-  }
-
   function handleZoomRegion(region: Region, regionPlaces: PlaceAlbum[]) {
     const [lat, lon] = regionCentroid(regionPlaces);
     const [phi, theta] = locationToAngles(lat, lon);
@@ -268,7 +304,6 @@ export function GlobeMap({ places }: GlobeMapProps) {
     targetScaleRef.current = REGION_ZOOM_SCALE;
     rotationLockedRef.current = true;
     setZoomedRegion(region);
-    setSelectedId(null);
   }
 
   function handleResetZoom() {
@@ -278,8 +313,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
     setZoomedRegion(null);
   }
 
-  const selectedPlace =
-    places.find((place) => place.tag.id === selectedId) ?? null;
+  const activePlace = places.find((place) => place.tag.id === selectedId) ?? null;
 
   return (
     <div className="flex h-[calc(100dvh-3rem)] flex-col">
@@ -297,63 +331,30 @@ export function GlobeMap({ places }: GlobeMapProps) {
           nenhum local com coordenadas ainda
         </p>
       ) : (
-        <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
-          <aside className="order-2 flex max-h-[40vh] flex-col gap-4 overflow-y-auto border-border px-4 py-4 sm:px-6 md:order-1 md:max-h-none md:w-64 md:shrink-0 md:border-r">
-            <button
-              onClick={handleResetZoom}
-              disabled={!zoomedRegion}
-              className={`w-full rounded-sm border px-3 py-2 text-left font-mono text-[10px] uppercase tracking-widest ${
-                zoomedRegion
-                  ? "border-accent text-accent hover:bg-accent hover:text-background"
-                  : "border-border text-muted opacity-50"
-              }`}
-            >
-              ↺ escala normal
-            </button>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 pb-3 pt-16 sm:px-6">
+            {zoomedRegion ? (
+              <button
+                onClick={handleResetZoom}
+                className="flex items-center gap-2 rounded-full border border-accent bg-accent px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-background"
+              >
+                {REGION_LABEL[zoomedRegion]}
+                <span aria-hidden>×</span>
+              </button>
+            ) : (
+              regionGroups.map(({ region, places: regionPlaces }) => (
+                <button
+                  key={region}
+                  onClick={() => handleZoomRegion(region, regionPlaces)}
+                  className="rounded-full border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:border-muted hover:text-foreground"
+                >
+                  {REGION_LABEL[region]}
+                </button>
+              ))
+            )}
+          </div>
 
-            {regionGroups.map(({ region, places: regionPlaces }) => (
-              <div key={region} className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-muted">
-                    {REGION_LABEL[region]}
-                  </span>
-                  <button
-                    onClick={() => handleZoomRegion(region, regionPlaces)}
-                    className={`font-mono text-[9px] uppercase tracking-widest ${
-                      zoomedRegion === region
-                        ? "text-accent"
-                        : "text-muted hover:text-foreground"
-                    }`}
-                  >
-                    + zoom
-                  </button>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {regionPlaces.map((place) => {
-                    const active = selectedId === place.tag.id;
-                    return (
-                      <button
-                        key={place.tag.id}
-                        onClick={() => handleSelect(place)}
-                        className={`flex items-center justify-between gap-2 rounded-sm border px-3 py-1.5 text-left text-sm font-medium ${
-                          active
-                            ? "border-accent bg-accent text-background"
-                            : "border-border bg-transparent text-foreground/70 hover:border-muted"
-                        }`}
-                      >
-                        <span className="truncate">{place.tag.name}</span>
-                        <span className="shrink-0 font-mono text-[9px] opacity-70">
-                          {place.count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </aside>
-
-          <div className="relative order-1 flex flex-1 items-center justify-center overflow-hidden px-4 py-6 sm:px-6 md:order-2">
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-4 sm:px-6">
             <div
               ref={wrapperRef}
               className="relative aspect-square w-full max-w-160 touch-none"
@@ -376,10 +377,20 @@ export function GlobeMap({ places }: GlobeMapProps) {
                   opacity: `var(--cobe-visible-${id}, 0)`,
                   filter: `blur(var(--cobe-visible-${id}, 10px))`,
                   "--polaroid-rotate": `${polaroidRotate(place.tag.id)}deg`,
+                  pointerEvents: "auto",
+                  cursor: "pointer",
                 };
                 return (
                   <div
                     key={place.tag.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => selectPlace(place)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        selectPlace(place);
+                      }
+                    }}
                     className={`globe-marker-polaroid ${isSelected ? "globe-marker-polaroid--selected z-20" : "z-10"}`}
                     style={style}
                   >
@@ -405,16 +416,84 @@ export function GlobeMap({ places }: GlobeMapProps) {
                 );
               })}
             </div>
-
-            {selectedPlace && (
-              <Link
-                href={`/mural?place=${encodeURIComponent(selectedPlace.tag.name)}`}
-                className="absolute bottom-6 rounded-full border border-accent bg-background px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-accent hover:bg-accent hover:text-background"
-              >
-                ver fotos de {selectedPlace.tag.name} →
-              </Link>
-            )}
           </div>
+
+          <div className="flex shrink-0 items-center gap-2 px-4 pb-2 sm:gap-3 sm:px-6">
+            <button
+              onClick={() => carouselApi?.scrollPrev()}
+              aria-label="Local anterior"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground"
+            >
+              ←
+            </button>
+
+            <Carousel
+              setApi={setCarouselApi}
+              opts={{ align: "center", containScroll: "trimSnaps" }}
+              className="min-w-0 flex-1"
+            >
+              <CarouselContent>
+                {/* Spacer nas pontas: sem espaço extra antes/depois dos
+                    cards reais, o Embla nunca consegue centralizar o
+                    primeiro/último item (não há pra onde rolar além da
+                    borda do conteúdo). */}
+                <CarouselItem
+                  aria-hidden
+                  className="basis-[calc(50%-4rem)] pointer-events-none sm:basis-[calc(50%-5rem)]"
+                />
+                {places.map((place) => {
+                  const active = selectedId === place.tag.id;
+                  return (
+                    <CarouselItem key={place.tag.id} className="basis-32 sm:basis-40">
+                      <button
+                        onClick={() => selectPlace(place)}
+                        className={`relative h-24 w-full overflow-hidden rounded-sm text-left transition-opacity duration-300 sm:h-28 ${
+                          active ? "opacity-100 ring-2 ring-accent" : "opacity-40 ring-1 ring-border"
+                        }`}
+                      >
+                        {place.cover && (
+                          <Image
+                            src={place.cover.thumbUrl}
+                            alt={place.tag.name}
+                            fill
+                            className="object-cover"
+                            sizes="160px"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                        <span className="absolute inset-x-0 bottom-0 truncate px-2 py-2 font-mono text-[10px] uppercase tracking-widest text-white">
+                          {place.tag.name}
+                        </span>
+                      </button>
+                    </CarouselItem>
+                  );
+                })}
+                <CarouselItem
+                  aria-hidden
+                  className="basis-[calc(50%-4rem)] pointer-events-none sm:basis-[calc(50%-5rem)]"
+                />
+              </CarouselContent>
+            </Carousel>
+
+            <button
+              onClick={() => carouselApi?.scrollNext()}
+              aria-label="Próximo local"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground"
+            >
+              →
+            </button>
+          </div>
+
+          {activePlace && (
+            <div className="flex shrink-0 justify-center px-4 pb-4 pt-1 sm:px-6">
+              <Link
+                href={`/local/${encodeURIComponent(activePlace.tag.name)}`}
+                className="rounded-full border border-accent bg-accent px-6 py-2.5 font-mono text-[10px] uppercase tracking-widest text-background hover:opacity-90"
+              >
+                Explorar
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>
