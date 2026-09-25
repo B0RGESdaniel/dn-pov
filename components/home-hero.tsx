@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { CSSProperties, useEffect } from "react";
 import { motion, stagger, useAnimate } from "motion/react";
 
 import Floating, { FloatingElement } from "@/components/ui/parallax-floating";
@@ -14,11 +14,23 @@ function photoAlt(photo: Photo): string {
   return photo.tags.map((tag) => tag.name).join(", ") || "Foto";
 }
 
+// Preserva a proporção real da foto (evita crop forçado do object-cover
+// numa caixa de dimensões fixas) — cai pra object-cover só se faltar
+// metadado de width/height.
+function aspectStyle(photo?: Photo): CSSProperties | undefined {
+  if (!photo?.width || !photo?.height) return undefined;
+  return { aspectRatio: `${photo.width} / ${photo.height}` };
+}
+
 export function HomeHero({ photos }: HomeHeroProps) {
   const [scope, animate] = useAnimate();
 
   useEffect(() => {
-    animate("img", { opacity: [0, 1] }, { duration: 0.5, delay: stagger(0.15) });
+    animate(
+      "img",
+      { opacity: [0, 1] },
+      { duration: 0.5, delay: stagger(0.15) },
+    );
   }, [animate]);
 
   return (
@@ -39,72 +51,107 @@ export function HomeHero({ photos }: HomeHeroProps) {
           acervo pessoal
         </p>
       </motion.div>
-
+      {/* mural sp */}
       <Floating sensitivity={-1} className="overflow-hidden">
-        <FloatingElement depth={0.5} className="top-[8%] left-[11%]">
+        <FloatingElement depth={0.5} className="top-[6%] left-[17%]">
           <motion.img
             initial={{ opacity: 0 }}
             src={photos[0]?.thumbUrl}
             alt={photos[0] ? photoAlt(photos[0]) : ""}
-            className="h-16 w-16 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:h-24 md:w-24"
+            style={aspectStyle(photos[0])}
+            className="h-auto w-24 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:w-40"
           />
         </FloatingElement>
-        <FloatingElement depth={1} className="top-[10%] left-[32%]">
+
+        {/* arnaldo quintela */}
+        <FloatingElement
+          depth={1}
+          className="top-[26%] left-[35%] md:left-[35%] md:top-[16%]"
+        >
           <motion.img
             initial={{ opacity: 0 }}
             src={photos[1]?.thumbUrl}
             alt={photos[1] ? photoAlt(photos[1]) : ""}
-            className="h-20 w-20 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:h-28 md:w-28"
+            style={aspectStyle(photos[1])}
+            className="h-auto w-28 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:w-44"
           />
         </FloatingElement>
-        <FloatingElement depth={2} className="top-[2%] left-[53%]">
+
+        {/* escada vaticano */}
+        <FloatingElement depth={2} className="top-[2%] left-[53%] md:top-[9%]">
           <motion.img
             initial={{ opacity: 0 }}
             src={photos[2]?.thumbUrl}
             alt={photos[2] ? photoAlt(photos[2]) : ""}
-            className="h-40 w-28 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:h-52 md:w-40"
+            style={aspectStyle(photos[2])}
+            className="h-auto w-32 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:w-56"
           />
         </FloatingElement>
-        <FloatingElement depth={1} className="top-[0%] left-[83%]">
+
+        {/* ponte */}
+        <FloatingElement
+          depth={1}
+          className="top-[30%] left-[78%] md:left-[78%] md:top-[25%]"
+        >
           <motion.img
             initial={{ opacity: 0 }}
             src={photos[3]?.thumbUrl}
             alt={photos[3] ? photoAlt(photos[3]) : ""}
-            className="h-24 w-24 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:h-32 md:w-32"
+            style={aspectStyle(photos[3])}
+            className="h-auto w-28 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:w-48"
           />
         </FloatingElement>
 
-        <FloatingElement depth={1} className="top-[40%] left-[2%]">
+        {/* menina */}
+        <FloatingElement depth={1} className="top-[42%] left-[9%]">
           <motion.img
             initial={{ opacity: 0 }}
             src={photos[4]?.thumbUrl}
             alt={photos[4] ? photoAlt(photos[4]) : ""}
-            className="h-28 w-28 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:h-36 md:w-36"
+            style={aspectStyle(photos[4])}
+            className="h-auto w-32 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:w-52"
           />
         </FloatingElement>
-        <FloatingElement depth={2} className="top-[70%] left-[77%]">
+
+        {/* nfl */}
+        <FloatingElement
+          depth={2}
+          className="top-[74%] left-[73%] md:top-[57%]"
+        >
           <motion.img
             initial={{ opacity: 0 }}
             src={photos[7]?.thumbUrl}
             alt={photos[7] ? photoAlt(photos[7]) : ""}
-            className="h-28 w-28 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:h-48 md:w-36"
+            style={aspectStyle(photos[7])}
+            className="h-auto w-32 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:w-52"
           />
         </FloatingElement>
 
-        <FloatingElement depth={4} className="top-[73%] left-[15%]">
+        {/* torre eiffel */}
+        <FloatingElement
+          depth={4}
+          className="top-[80%] left-[20%] md:left-[15%] md:top-[65%]"
+        >
           <motion.img
             initial={{ opacity: 0 }}
             src={photos[5]?.thumbUrl}
             alt={photos[5] ? photoAlt(photos[5]) : ""}
-            className="h-full w-40 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:w-52"
+            style={aspectStyle(photos[5])}
+            className="h-auto w-36 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:w-56"
           />
         </FloatingElement>
-        <FloatingElement depth={1} className="top-[80%] left-[50%]">
+
+        {/* porto */}
+        <FloatingElement
+          depth={1}
+          className="top-[62%] left-[50%] md:top-[70%]"
+        >
           <motion.img
             initial={{ opacity: 0 }}
             src={photos[6]?.thumbUrl}
             alt={photos[6] ? photoAlt(photos[6]) : ""}
-            className="h-24 w-24 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:h-32 md:w-32"
+            style={aspectStyle(photos[6])}
+            className="h-auto w-28 cursor-pointer object-cover transition-transform duration-200 hover:scale-105 md:w-48"
           />
         </FloatingElement>
       </Floating>
