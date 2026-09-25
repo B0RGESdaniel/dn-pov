@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion } from "motion/react";
 import { Photo, PhotoFilters, PhotosPage } from "@/types/photo";
 import { Lightbox } from "@/components/lightbox";
 
@@ -86,7 +87,13 @@ export function PhotoMasonry({
   }
 
   return (
-    <div className="px-4 py-4 sm:px-6">
+    <motion.div
+      className="px-4 py-4 sm:px-6"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.1 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
       <div className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">
         {photos.map((photo, index) => (
           <button
@@ -126,6 +133,6 @@ export function PhotoMasonry({
           onNavigate={setLightboxIndex}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
