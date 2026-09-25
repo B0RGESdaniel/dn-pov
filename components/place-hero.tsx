@@ -48,37 +48,37 @@ export function PlaceHero({ name, count, cover, prevName, nextName }: PlaceHeroP
 
         <div className="absolute inset-0 bg-black/50" />
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-4 text-center text-white">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-white/70">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 px-4 text-center text-white">
+          <p className="font-mono text-xs uppercase tracking-widest text-white/70 sm:text-sm">
             my perspective of
           </p>
+
+          <AnimatePresence mode="popLayout">
+            <motion.h1
+              key={name}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.35 }}
+              className="min-w-[8ch] font-display text-5xl tracking-tight sm:text-7xl"
+            >
+              {name}
+            </motion.h1>
+          </AnimatePresence>
 
           <div className="flex items-center gap-5 sm:gap-8">
             <Link
               href={`/local/${encodeURIComponent(prevName)}`}
               aria-label={`Local anterior: ${prevName}`}
-              className="font-mono text-2xl text-white/60 transition-colors hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/30 font-mono text-base text-white/70 transition-colors hover:border-white hover:text-white sm:h-11 sm:w-11 sm:text-lg"
             >
               ←
             </Link>
 
-            <AnimatePresence mode="popLayout">
-              <motion.h1
-                key={name}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.35 }}
-                className="min-w-[8ch] font-display text-4xl tracking-tight sm:text-6xl"
-              >
-                {name}
-              </motion.h1>
-            </AnimatePresence>
-
             <Link
               href={`/local/${encodeURIComponent(nextName)}`}
               aria-label={`Próximo local: ${nextName}`}
-              className="font-mono text-2xl text-white/60 transition-colors hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/30 font-mono text-base text-white/70 transition-colors hover:border-white hover:text-white sm:h-11 sm:w-11 sm:text-lg"
             >
               →
             </Link>
