@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 
 interface PlaceHeroProps {
   name: string;
@@ -12,61 +15,87 @@ interface PlaceHeroProps {
   nextName: string;
 }
 
+// "my perspective of", a moldura e as setas nunca trocam de identidade entre
+// navegações (mesmo componente, mesma posição na árvore) — só a foto e o
+// nome do local, dentro do AnimatePresence, fazem crossfade a cada troca.
 export function PlaceHero({ name, count, cover, prevName, nextName }: PlaceHeroProps) {
   return (
-    <section className="flex flex-col items-center gap-6 px-4 py-14 sm:px-6 sm:py-20">
-      <div className="flex flex-col items-center gap-1 text-center">
-        <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
-          my perspective of
-        </p>
-        <h1 className="font-display text-4xl tracking-tight sm:text-5xl">
-          {name}
-        </h1>
-      </div>
+    <section className="relative h-[calc(100dvh-3rem)] w-full p-4 sm:p-8">
+      <div className="relative h-full w-full overflow-hidden rounded-sm border border-border bg-surface">
+        <AnimatePresence>
+          {cover && (
+            <motion.div
+              key={name}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="absolute inset-0"
+            >
+              <Image
+                src={cover.thumbUrl}
+                alt={name}
+                fill
+                className="object-cover"
+                sizes="100vw"
+                placeholder={cover.blurDataUrl ? "blur" : undefined}
+                blurDataURL={cover.blurDataUrl ?? undefined}
+                priority
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <div className="w-full max-w-sm overflow-hidden rounded-sm border border-border bg-surface shadow-lg sm:max-w-md">
-        {cover && (
-          <div className="relative aspect-[4/5] w-full">
-            <Image
-              src={cover.thumbUrl}
-              alt={name}
-              fill
-              className="object-cover"
-              sizes="(min-width: 640px) 448px, 90vw"
-              placeholder={cover.blurDataUrl ? "blur" : undefined}
-              blurDataURL={cover.blurDataUrl ?? undefined}
-              priority
-            />
+        <div className="absolute inset-0 bg-black/50" />
+
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-4 text-center text-white">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-white/70">
+            my perspective of
+          </p>
+
+          <div className="flex items-center gap-5 sm:gap-8">
+            <Link
+              href={`/local/${encodeURIComponent(prevName)}`}
+              aria-label={`Local anterior: ${prevName}`}
+              className="font-mono text-2xl text-white/60 transition-colors hover:text-white"
+            >
+              ←
+            </Link>
+
+            <AnimatePresence mode="popLayout">
+              <motion.h1
+                key={name}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.35 }}
+                className="min-w-[8ch] font-display text-4xl tracking-tight sm:text-6xl"
+              >
+                {name}
+              </motion.h1>
+            </AnimatePresence>
+
+            <Link
+              href={`/local/${encodeURIComponent(nextName)}`}
+              aria-label={`Próximo local: ${nextName}`}
+              className="font-mono text-2xl text-white/60 transition-colors hover:text-white"
+            >
+              →
+            </Link>
           </div>
-        )}
-      </div>
 
-      <div className="flex items-center gap-6">
-        <Link
-          href={`/local/${encodeURIComponent(prevName)}`}
-          aria-label={`Local anterior: ${prevName}`}
-          className="font-mono text-lg text-muted transition-colors hover:text-foreground"
-        >
-          ←
-        </Link>
-        <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
-          {count} {count === 1 ? "foto" : "fotos"}
-        </span>
-        <Link
-          href={`/local/${encodeURIComponent(nextName)}`}
-          aria-label={`Próximo local: ${nextName}`}
-          className="font-mono text-lg text-muted transition-colors hover:text-foreground"
-        >
-          →
-        </Link>
-      </div>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-white/60">
+            {count} {count === 1 ? "foto" : "fotos"}
+          </p>
+        </div>
 
-      <a
-        href="#fotos"
-        className="font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:text-foreground"
-      >
-        ver fotos ↓
-      </a>
+        <a
+          href="#fotos"
+          className="absolute inset-x-0 bottom-4 mx-auto w-max font-mono text-[10px] uppercase tracking-widest text-white/60 transition-colors hover:text-white sm:bottom-8"
+        >
+          ver fotos ↓
+        </a>
+      </div>
     </section>
   );
 }
