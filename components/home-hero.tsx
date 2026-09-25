@@ -65,7 +65,7 @@ export function HomeHero({ photos }: HomeHeroProps) {
             <Link
               key={destination.href}
               href={destination.href}
-              className="rounded-full border border-border px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-foreground/80 transition-colors hover:border-accent hover:text-foreground"
+              className="rounded-full bg-white px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-black transition-transform hover:scale-105"
             >
               {destination.label}
             </Link>
@@ -87,7 +87,7 @@ export function HomeHero({ photos }: HomeHeroProps) {
         {/* arnaldo quintela */}
         <FloatingElement
           depth={1}
-          className="top-[26%] left-[35%] md:left-[35%] md:top-[16%]"
+          className="top-[26%] left-[25%] md:left-[35%] md:top-[16%]"
         >
           <motion.img
             initial={{ opacity: 0 }}
@@ -151,7 +151,7 @@ export function HomeHero({ photos }: HomeHeroProps) {
         {/* torre eiffel */}
         <FloatingElement
           depth={4}
-          className="top-[80%] left-[20%] md:left-[15%] md:top-[65%]"
+          className="top-[75%] left-[10%] md:left-[15%] md:top-[65%]"
         >
           <motion.img
             initial={{ opacity: 0 }}
