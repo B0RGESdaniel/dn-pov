@@ -24,6 +24,12 @@ const FALLBACK_HEIGHT = 5;
 // página (scroll nativo — sem canvas arrastável, sem cálculo de posição).
 const LOAD_ROOT_MARGIN = "800px 0px";
 
+// Delay em cascata por foto, em vez de uma animação só pro grid inteiro —
+// módulo pra reiniciar o ciclo a cada "leva" de fotos e não acumular um
+// atraso enorme conforme o índice cresce no scroll infinito.
+const STAGGER_CYCLE = 12;
+const STAGGER_STEP = 0.05;
+
 export function PhotoMasonry({
   initialPhotos,
   initialCursor,
@@ -87,18 +93,20 @@ export function PhotoMasonry({
   }
 
   return (
-    <motion.div
-      className="px-4 py-4 sm:px-6"
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.1 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-    >
+    <div className="px-4 py-4 sm:px-6">
       <div className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">
         {photos.map((photo, index) => (
-          <button
+          <motion.button
             key={photo.id}
             onClick={() => setLightboxIndex(index)}
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{
+              duration: 0.4,
+              ease: "easeOut",
+              delay: (index % STAGGER_CYCLE) * STAGGER_STEP,
+            }}
             className="mb-3 block w-full break-inside-avoid overflow-hidden rounded-sm bg-surface shadow-lg sm:mb-4"
             aria-label={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
           >
@@ -113,7 +121,7 @@ export function PhotoMasonry({
               blurDataURL={photo.blurDataUrl ?? undefined}
               priority={index < 8}
             />
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -133,6 +141,6 @@ export function PhotoMasonry({
           onNavigate={setLightboxIndex}
         />
       )}
-    </motion.div>
+    </div>
   );
 }
