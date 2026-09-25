@@ -142,7 +142,7 @@ export function SiteNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-background px-4 py-3 sm:px-6">
+    <nav className="absolute top-0 z-20 flex w-full items-center gap-2 px-4 py-3 sm:px-6">
       <Link href="/" className="mr-4 font-display text-base tracking-tight">
         dn-pov
       </Link>

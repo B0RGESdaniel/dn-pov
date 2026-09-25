@@ -47,9 +47,9 @@ export function PlaceHero({ name, count, cover, prevName, nextName }: PlaceHeroP
     <div
       ref={containerRef}
       className="relative"
-      style={{ height: `calc(100svh - 3rem + ${SCROLL_RANGE_VH}vh)` }}
+      style={{ height: `calc(100svh + ${SCROLL_RANGE_VH}vh)` }}
     >
-      <div className="sticky top-12 h-[calc(100svh-3rem)] w-full">
+      <div className="sticky top-0 h-[100svh] w-full">
         <motion.div
           style={{ opacity: cardOpacity }}
           className="relative h-full w-full overflow-hidden bg-surface"

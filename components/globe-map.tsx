@@ -134,9 +134,9 @@ export function GlobeMap({ places }: GlobeMapProps) {
       diffuse: 1.2,
       mapSamples: 16000,
       mapBrightness: 4.5,
-      baseColor: [0.45, 0.6, 0.85],
+      baseColor: [0.25, 0.45, 0.85],
       markerColor: [0.894, 0.863, 0.784],
-      glowColor: [0.35, 0.32, 0.28],
+      glowColor: [0.2, 0.35, 0.65],
       markerElevation: 0,
       markers,
     });
@@ -270,16 +270,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
           });
 
   return (
-    <div className="flex h-[calc(100dvh-3rem)] flex-col">
-      <header className="border-b border-border bg-background px-4 py-4 sm:px-6">
-        <div className="flex items-baseline gap-3">
-          <h1 className="font-display text-lg tracking-tight">Mapa</h1>
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
-            {places.length} {places.length === 1 ? "local" : "locais"}
-          </span>
-        </div>
-      </header>
-
+    <div className="flex h-[100svh] flex-col">
       {places.length === 0 ? (
         <p className="flex-1 p-8 text-center font-mono text-xs uppercase tracking-widest text-muted">
           nenhum local com coordenadas ainda
