@@ -7,7 +7,6 @@ import { useRef, useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/mural", label: "mural" },
-  { href: "/local", label: "local" },
   { href: "/mapa", label: "mapa" },
 ];
 

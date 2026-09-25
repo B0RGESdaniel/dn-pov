@@ -153,7 +153,7 @@ export function getMockPhotos({
   return { photos: page, nextCursor };
 }
 
-export function getMockAlbums(): Album[] {
+function getMockAlbums(): Album[] {
   const { photos, tags } = buildMockState();
 
   return tags

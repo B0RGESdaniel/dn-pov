@@ -129,23 +129,6 @@ async function attachCovers<T extends { tag: Tag }>(
   }));
 }
 
-export async function getAlbums(): Promise<Album[]> {
-  const tagsResult = await db.execute(`
-    SELECT t.id, t.name, t.category, t.lat, t.lon, COUNT(pt.photo_id) as count
-    FROM tags t
-    JOIN photo_tags pt ON pt.tag_id = t.id
-    GROUP BY t.id
-    ORDER BY t.category, t.name
-  `);
-
-  const albumsBase = tagsResult.rows.map((row) => ({
-    tag: rowToTag(row as unknown as Record<string, unknown>),
-    count: Number(row.count),
-  }));
-
-  return attachCovers(albumsBase);
-}
-
 export interface PlaceAlbum {
   tag: Tag & { lat: number; lon: number };
   count: number;

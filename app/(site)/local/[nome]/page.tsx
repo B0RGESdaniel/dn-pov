@@ -27,7 +27,7 @@ export default async function LocalPage({ params }: PageProps<"/local/[nome]">) 
         nextName={next.tag.name}
       />
 
-      <div id="fotos">
+      <div id="fotos" className="relative z-[15] min-h-[calc(100svh+4rem)] bg-background">
         <PhotoMasonry
           key={name}
           initialPhotos={initialPage.photos}
