@@ -32,3 +32,9 @@ export type PhotosPage = {
   photos: Photo[];
   nextCursor: string | null;
 };
+
+export type PhotoFilters = {
+  place?: string[];
+  subject?: string[];
+  color?: string[];
+};

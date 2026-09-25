@@ -13,7 +13,7 @@ interface HomeHeroProps {
 
 const DESTINATIONS = [
   { href: "/mural", label: "mural" },
-  { href: "/albuns", label: "álbuns" },
+  { href: "/local", label: "local" },
   { href: "/mapa", label: "mapa" },
 ] as const;
 

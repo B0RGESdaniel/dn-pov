@@ -7,7 +7,7 @@ import { useRef, useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/mural", label: "mural" },
-  { href: "/albuns", label: "álbuns" },
+  { href: "/local", label: "local" },
   { href: "/mapa", label: "mapa" },
 ];
 
@@ -152,7 +152,9 @@ export function SiteNav() {
           key={item.href}
           href={item.href}
           label={item.label}
-          isActive={pathname === item.href}
+          isActive={
+            pathname === item.href || pathname.startsWith(`${item.href}/`)
+          }
         />
       ))}
     </nav>
