@@ -141,7 +141,7 @@ export function PhotoMural({
     // à toa quando o usuário só abriu e fechou o drawer sem mexer em nada.
     const nextQuery = buildQuery(pendingFilters);
     if (nextQuery !== buildQuery(activeFilters)) {
-      router.push(`/${nextQuery}`);
+      router.push(`/mural${nextQuery}`);
     }
   }
 

@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useRef, useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/", label: "mural" },
+  { href: "/mural", label: "mural" },
   { href: "/albuns", label: "álbuns" },
   { href: "/mapa", label: "mapa" },
 ];

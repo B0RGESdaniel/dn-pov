@@ -1,6 +1,7 @@
 "use client";
 
 import { CSSProperties, useEffect } from "react";
+import Link from "next/link";
 import { motion, stagger, useAnimate } from "motion/react";
 
 import Floating, { FloatingElement } from "@/components/ui/parallax-floating";
@@ -9,6 +10,12 @@ import { Photo } from "@/types/photo";
 interface HomeHeroProps {
   photos: Photo[];
 }
+
+const DESTINATIONS = [
+  { href: "/mural", label: "mural" },
+  { href: "/albuns", label: "álbuns" },
+  { href: "/mapa", label: "mapa" },
+] as const;
 
 function photoAlt(photo: Photo): string {
   return photo.tags.map((tag) => tag.name).join(", ") || "Foto";
@@ -35,21 +42,35 @@ export function HomeHero({ photos }: HomeHeroProps) {
 
   return (
     <div
-      className="relative flex h-[calc(100vh-3.5rem)] w-full items-center justify-center overflow-hidden bg-background"
+      className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-background"
       ref={scope}
     >
       <motion.div
-        className="z-50 flex flex-col items-center space-y-4 text-center"
+        className="z-50 flex flex-col items-center space-y-5 text-center"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.88, delay: 1.5 }}
       >
-        <p className="z-50 font-display text-5xl text-foreground md:text-7xl">
-          dn-pov.
-        </p>
-        <p className="z-50 font-mono text-[10px] uppercase tracking-widest text-muted">
-          acervo pessoal
-        </p>
+        <div className="space-y-4">
+          <p className="font-display text-5xl text-foreground md:text-7xl">
+            dn-pov.
+          </p>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+            acervo pessoal
+          </p>
+        </div>
+
+        <nav className="flex flex-wrap items-center justify-center gap-2">
+          {DESTINATIONS.map((destination) => (
+            <Link
+              key={destination.href}
+              href={destination.href}
+              className="rounded-full border border-border px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-foreground/80 transition-colors hover:border-accent hover:text-foreground"
+            >
+              {destination.label}
+            </Link>
+          ))}
+        </nav>
       </motion.div>
       {/* mural sp */}
       <Floating sensitivity={-1} className="overflow-hidden">
