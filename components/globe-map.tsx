@@ -3,14 +3,9 @@
 import createGlobe, { COBEOptions } from "cobe";
 import Image from "next/image";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PlaceAlbum } from "@/lib/db";
-import {
-  Carousel,
-  CarouselApi,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
 
 interface GlobeMapProps {
   places: PlaceAlbum[];
@@ -44,6 +39,23 @@ function markerId(placeId: number): string {
   return `place-${placeId}`;
 }
 
+// Variants do slide horizontal do nome em foco e dos nomes anterior/próximo
+// nos cantos — mesma direção (via slideDirectionRef), distância proporcional
+// ao tamanho de cada texto.
+function slideVariants(distance: number) {
+  return {
+    enter: (direction: number) => ({
+      opacity: 0,
+      x: direction > 0 ? distance : -distance,
+    }),
+    center: { opacity: 1, x: 0 },
+    exit: (direction: number) => ({
+      opacity: 0,
+      x: direction > 0 ? -distance : distance,
+    }),
+  };
+}
+
 // Rotação determinística do polaroid por local (-6 a 6 graus) — hash
 // inteiro puro (Math.imul), não Math.sin: essa última não é garantida
 // bit-a-bit idêntica entre o Node (SSR) e o browser, o que já causou
@@ -63,9 +75,12 @@ export function GlobeMap({ places }: GlobeMapProps) {
   const targetRef = useRef<{ phi: number; theta: number } | null>(null);
   const pointerRef = useRef({ down: false, x: 0, y: 0 });
   const widthRef = useRef(560);
+  // Sentido do slide horizontal do nome em destaque (1 = da direita pra
+  // esquerda, -1 = o inverso) — recalculado a cada troca de local, não
+  // precisa ser state porque só é lido no render que a própria troca dispara.
+  const slideDirectionRef = useRef(1);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
 
   // O dot do marcador (size) marca o ponto exato; o cartão polaroid flutua
   // acima dele. O id é o que o cobe usa pra gerar os anchors/variáveis CSS
@@ -151,41 +166,41 @@ export function GlobeMap({ places }: GlobeMapProps) {
     globeRef.current?.update({ markers });
   }, [markers]);
 
-  // Só gira o globo até o local e marca a seleção — não mexe no carrossel.
-  // Usado tanto por quem inicia a seleção fora do carrossel (clique num
-  // marcador) quanto pelo próprio evento "select" do carrossel, que já
-  // rolou sozinho.
+  // Gira o globo até o local e marca a seleção. Usado pelo clique num
+  // marcador, pelas setas ←/→ e pelos nomes anterior/próximo nos cantos.
   function focusPlace(place: PlaceAlbum) {
+    const newIndex = places.findIndex((item) => item.tag.id === place.tag.id);
+    const oldIndex = places.findIndex((item) => item.tag.id === selectedId);
+    if (newIndex !== -1 && oldIndex !== -1 && newIndex !== oldIndex) {
+      // Sentido do caminho mais curto no círculo de locais — assim um clique
+      // direto num marcador (não só nas setas) também desliza pro lado certo.
+      const forward = (newIndex - oldIndex + places.length) % places.length;
+      const backward = (oldIndex - newIndex + places.length) % places.length;
+      slideDirectionRef.current = forward <= backward ? 1 : -1;
+    }
     setSelectedId(place.tag.id);
     const [phi, theta] = locationToAngles(place.tag.lat, place.tag.lon);
     targetRef.current = { phi, theta };
   }
 
-  // Clique num marcador do globo ou num card do carrossel: foca o local e
-  // garante que o carrossel também role até o card correspondente.
-  function selectPlace(place: PlaceAlbum) {
-    focusPlace(place);
-    const index = places.findIndex((item) => item.tag.id === place.tag.id);
-    if (index !== -1) carouselApi?.scrollTo(index);
+  // Avança/retrocede (com wrap-around) a partir do local em foco — usado
+  // pelas setas do nome em destaque, já que não há mais um carrossel visual
+  // de onde tirar o índice atual.
+  function focusPlaceByOffset(offset: number) {
+    if (places.length === 0) return;
+    const currentIndex = places.findIndex((place) => place.tag.id === selectedId);
+    const baseIndex = currentIndex === -1 ? 0 : currentIndex;
+    const nextIndex = (baseIndex + offset + places.length) % places.length;
+    focusPlace(places[nextIndex]);
   }
 
-  // Sincroniza a partir do carrossel: tanto o estado inicial (local em foco
-  // assim que a API do Embla fica disponível) quanto qualquer troca de slide
-  // por arrasto/teclado do próprio usuário.
+  // Seleciona o primeiro local assim que a lista chega — antes disso não há
+  // local em foco.
   useEffect(() => {
-    if (!carouselApi || places.length === 0) return;
-
-    function handleSelect() {
-      const place = places[carouselApi!.selectedScrollSnap()];
-      if (place) focusPlace(place);
-    }
-
-    handleSelect();
-    carouselApi.on("select", handleSelect);
-    return () => {
-      carouselApi.off("select", handleSelect);
-    };
-  }, [carouselApi, places]);
+    if (places.length === 0 || selectedId !== null) return;
+    focusPlace(places[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só roda na chegada da lista, focusPlace não precisa disparar de novo
+  }, [places]);
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
     pointerRef.current = { down: true, x: event.clientX, y: event.clientY };
@@ -212,6 +227,10 @@ export function GlobeMap({ places }: GlobeMapProps) {
   }
 
   const activePlace = places.find((place) => place.tag.id === selectedId) ?? null;
+  const activeIndex = places.findIndex((place) => place.tag.id === selectedId);
+  const baseIndex = activeIndex === -1 ? 0 : activeIndex;
+  const prevPlace = places.length > 0 ? places[(baseIndex - 1 + places.length) % places.length] : null;
+  const nextPlace = places.length > 0 ? places[(baseIndex + 1) % places.length] : null;
 
   return (
     <div className="flex h-[calc(100dvh-3rem)] flex-col">
@@ -229,63 +248,75 @@ export function GlobeMap({ places }: GlobeMapProps) {
           nenhum local com coordenadas ainda
         </p>
       ) : (
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex shrink-0 items-center gap-2 px-4 pb-3 pt-16 sm:gap-3 sm:px-6">
+        <div className="relative flex flex-1 flex-col overflow-hidden">
+          <div className="pointer-events-none absolute left-4 top-16 z-10 max-w-[38vw] overflow-hidden sm:left-6 sm:top-20">
+            <AnimatePresence mode="popLayout" custom={slideDirectionRef.current} initial={false}>
+              {prevPlace && (
+                <motion.button
+                  key={prevPlace.tag.id}
+                  custom={slideDirectionRef.current}
+                  variants={slideVariants(24)}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+                  onClick={() => focusPlace(prevPlace)}
+                  className="pointer-events-auto block truncate text-left font-display text-lg tracking-tight text-foreground/30 hover:text-foreground/60 sm:text-2xl md:text-3xl"
+                >
+                  {prevPlace.tag.name}
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="pointer-events-none absolute right-4 top-16 z-10 max-w-[38vw] overflow-hidden sm:right-6 sm:top-20">
+            <AnimatePresence mode="popLayout" custom={slideDirectionRef.current} initial={false}>
+              {nextPlace && (
+                <motion.button
+                  key={nextPlace.tag.id}
+                  custom={slideDirectionRef.current}
+                  variants={slideVariants(24)}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+                  onClick={() => focusPlace(nextPlace)}
+                  className="pointer-events-auto block truncate text-right font-display text-lg tracking-tight text-foreground/30 hover:text-foreground/60 sm:text-2xl md:text-3xl"
+                >
+                  {nextPlace.tag.name}
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="flex shrink-0 justify-center overflow-hidden px-20 pb-2 pt-16 sm:px-28 sm:pt-20">
+            <AnimatePresence mode="popLayout" custom={slideDirectionRef.current} initial={false}>
+              {activePlace && (
+                <motion.h1
+                  key={activePlace.tag.id}
+                  custom={slideDirectionRef.current}
+                  variants={slideVariants(60)}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+                  className="min-w-[4ch] text-center font-display text-4xl tracking-tight sm:text-6xl md:text-7xl"
+                >
+                  {activePlace.tag.name}
+                </motion.h1>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-4 sm:px-6">
             <button
-              onClick={() => carouselApi?.scrollPrev()}
+              onClick={() => focusPlaceByOffset(-1)}
               aria-label="Local anterior"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground"
+              className="absolute left-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground sm:left-6 sm:h-11 sm:w-11"
             >
               ←
             </button>
 
-            <Carousel
-              setApi={setCarouselApi}
-              opts={{ align: "center", containScroll: "trimSnaps" }}
-              className="min-w-0 flex-1"
-            >
-              <CarouselContent>
-                {/* Spacer nas pontas: proporcional em vez de largura fixa —
-                    cada item agora tem a largura do próprio nome, não um
-                    card de tamanho constante, mas o motivo é o mesmo de
-                    antes (dar folga pro Embla centralizar o primeiro/último
-                    item). */}
-                <CarouselItem
-                  aria-hidden
-                  className="basis-1/4 pointer-events-none sm:basis-1/3"
-                />
-                {places.map((place) => {
-                  const active = selectedId === place.tag.id;
-                  return (
-                    <CarouselItem key={place.tag.id} className="basis-auto">
-                      <button
-                        onClick={() => selectPlace(place)}
-                        className={`whitespace-nowrap font-display text-2xl tracking-tight transition-opacity duration-500 sm:text-4xl md:text-6xl ${
-                          active ? "opacity-100" : "opacity-30"
-                        }`}
-                      >
-                        {place.tag.name}
-                      </button>
-                    </CarouselItem>
-                  );
-                })}
-                <CarouselItem
-                  aria-hidden
-                  className="basis-1/4 pointer-events-none sm:basis-1/3"
-                />
-              </CarouselContent>
-            </Carousel>
-
-            <button
-              onClick={() => carouselApi?.scrollNext()}
-              aria-label="Próximo local"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground"
-            >
-              →
-            </button>
-          </div>
-
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-4 sm:px-6">
             <div
               ref={wrapperRef}
               className="relative aspect-square w-full max-w-160 touch-none"
@@ -316,10 +347,10 @@ export function GlobeMap({ places }: GlobeMapProps) {
                     key={place.tag.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => selectPlace(place)}
+                    onClick={() => focusPlace(place)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
-                        selectPlace(place);
+                        focusPlace(place);
                       }
                     }}
                     className={`globe-marker-polaroid ${isSelected ? "globe-marker-polaroid--selected z-20" : "z-10"}`}
@@ -347,6 +378,14 @@ export function GlobeMap({ places }: GlobeMapProps) {
                 );
               })}
             </div>
+
+            <button
+              onClick={() => focusPlaceByOffset(1)}
+              aria-label="Próximo local"
+              className="absolute right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground sm:right-6 sm:h-11 sm:w-11"
+            >
+              →
+            </button>
           </div>
 
           {activePlace && (
