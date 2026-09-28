@@ -230,8 +230,60 @@ export function GlobeMap({ places }: GlobeMapProps) {
         </p>
       ) : (
         <div className="flex flex-1 flex-col overflow-hidden">
-          {/* TODO (passo 3): carrossel de texto com o nome do lugar entra aqui. */}
-          <div className="shrink-0 pt-16" />
+          <div className="flex shrink-0 items-center gap-2 px-4 pb-3 pt-16 sm:gap-3 sm:px-6">
+            <button
+              onClick={() => carouselApi?.scrollPrev()}
+              aria-label="Local anterior"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground"
+            >
+              ←
+            </button>
+
+            <Carousel
+              setApi={setCarouselApi}
+              opts={{ align: "center", containScroll: "trimSnaps" }}
+              className="min-w-0 flex-1"
+            >
+              <CarouselContent>
+                {/* Spacer nas pontas: proporcional em vez de largura fixa —
+                    cada item agora tem a largura do próprio nome, não um
+                    card de tamanho constante, mas o motivo é o mesmo de
+                    antes (dar folga pro Embla centralizar o primeiro/último
+                    item). */}
+                <CarouselItem
+                  aria-hidden
+                  className="basis-1/4 pointer-events-none sm:basis-1/3"
+                />
+                {places.map((place) => {
+                  const active = selectedId === place.tag.id;
+                  return (
+                    <CarouselItem key={place.tag.id} className="basis-auto">
+                      <button
+                        onClick={() => selectPlace(place)}
+                        className={`whitespace-nowrap font-display text-2xl tracking-tight transition-opacity duration-500 sm:text-4xl md:text-6xl ${
+                          active ? "opacity-100" : "opacity-30"
+                        }`}
+                      >
+                        {place.tag.name}
+                      </button>
+                    </CarouselItem>
+                  );
+                })}
+                <CarouselItem
+                  aria-hidden
+                  className="basis-1/4 pointer-events-none sm:basis-1/3"
+                />
+              </CarouselContent>
+            </Carousel>
+
+            <button
+              onClick={() => carouselApi?.scrollNext()}
+              aria-label="Próximo local"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground"
+            >
+              →
+            </button>
+          </div>
 
           <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-4 sm:px-6">
             <div
@@ -295,72 +347,6 @@ export function GlobeMap({ places }: GlobeMapProps) {
                 );
               })}
             </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2 px-4 pb-2 sm:gap-3 sm:px-6">
-            <button
-              onClick={() => carouselApi?.scrollPrev()}
-              aria-label="Local anterior"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground"
-            >
-              ←
-            </button>
-
-            <Carousel
-              setApi={setCarouselApi}
-              opts={{ align: "center", containScroll: "trimSnaps" }}
-              className="min-w-0 flex-1"
-            >
-              <CarouselContent>
-                {/* Spacer nas pontas: sem espaço extra antes/depois dos
-                    cards reais, o Embla nunca consegue centralizar o
-                    primeiro/último item (não há pra onde rolar além da
-                    borda do conteúdo). */}
-                <CarouselItem
-                  aria-hidden
-                  className="basis-[calc(50%-4rem)] pointer-events-none sm:basis-[calc(50%-5rem)]"
-                />
-                {places.map((place) => {
-                  const active = selectedId === place.tag.id;
-                  return (
-                    <CarouselItem key={place.tag.id} className="basis-32 sm:basis-40">
-                      <button
-                        onClick={() => selectPlace(place)}
-                        className={`relative h-24 w-full overflow-hidden rounded-sm text-left transition-opacity duration-300 sm:h-28 ${
-                          active ? "opacity-100 ring-2 ring-accent" : "opacity-40 ring-1 ring-border"
-                        }`}
-                      >
-                        {place.cover && (
-                          <Image
-                            src={place.cover.thumbUrl}
-                            alt={place.tag.name}
-                            fill
-                            className="object-cover"
-                            sizes="160px"
-                          />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                        <span className="absolute inset-x-0 bottom-0 truncate px-2 py-2 font-mono text-[10px] uppercase tracking-widest text-white">
-                          {place.tag.name}
-                        </span>
-                      </button>
-                    </CarouselItem>
-                  );
-                })}
-                <CarouselItem
-                  aria-hidden
-                  className="basis-[calc(50%-4rem)] pointer-events-none sm:basis-[calc(50%-5rem)]"
-                />
-              </CarouselContent>
-            </Carousel>
-
-            <button
-              onClick={() => carouselApi?.scrollNext()}
-              aria-label="Próximo local"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground"
-            >
-              →
-            </button>
           </div>
 
           {activePlace && (
