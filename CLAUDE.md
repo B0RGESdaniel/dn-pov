@@ -40,8 +40,10 @@ CREATE TABLE tags (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   category TEXT NOT NULL CHECK (category IN ('place', 'subject', 'color')),
-  lat REAL,    -- só usado quando category = 'place'
+  lat REAL,           -- só usado quando category = 'place'
   lon REAL,
+  color_bg TEXT,       -- só usado quando category = 'place' (tema dinâmico da tela de Mapa)
+  color_accent TEXT,
   UNIQUE (name, category)
 );
 
@@ -62,7 +64,8 @@ node scripts/upload.ts ./fotos --place rio-de-janeiro --lat -22.9 --lon -43.2 --
 
 Flags, todas opcionais e manuais (sem geocoding/detecção automática):
 
-- `--place <nome>` — cria/atualiza uma tag de local; combine com `--lat`/`--lon` pra popular coordenadas (usadas futuramente na tela de Mapa)
+- `--place <nome>` — cria/atualiza uma tag de local; combine com `--lat`/`--lon` pra popular coordenadas (usadas na tela de Mapa)
+- `--color-bg <hex>` / `--color-accent <hex>` — as 2 cores do local (fundo + accent), usadas no tema dinâmico da tela de Mapa; só fazem sentido junto com `--place`
 - `--subjects <a,b,c>` — tags de assunto (lista livre)
 - `--color <nome>` — tag de cor (lista livre)
 - `--edited` — marca as fotos do lote como editadas (padrão: original)

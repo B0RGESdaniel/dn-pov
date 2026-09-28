@@ -29,6 +29,8 @@ export interface NewTagInput {
   category: TagCategory;
   lat?: number | null;
   lon?: number | null;
+  colorBg?: string | null;
+  colorAccent?: string | null;
 }
 
 function rowToTag(row: Record<string, unknown>): Tag {
@@ -38,6 +40,8 @@ function rowToTag(row: Record<string, unknown>): Tag {
     category: row.category as TagCategory,
     lat: row.lat as number | null,
     lon: row.lon as number | null,
+    colorBg: row.color_bg as string | null,
+    colorAccent: row.color_accent as string | null,
   };
 }
 
@@ -47,16 +51,25 @@ export async function upsertTags(inputs: NewTagInput[]): Promise<Tag[]> {
   for (const input of inputs) {
     await db.execute({
       sql: `
-        INSERT INTO tags (name, category, lat, lon) VALUES (?, ?, ?, ?)
+        INSERT INTO tags (name, category, lat, lon, color_bg, color_accent) VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(name, category) DO UPDATE SET
           lat = COALESCE(excluded.lat, tags.lat),
-          lon = COALESCE(excluded.lon, tags.lon)
+          lon = COALESCE(excluded.lon, tags.lon),
+          color_bg = COALESCE(excluded.color_bg, tags.color_bg),
+          color_accent = COALESCE(excluded.color_accent, tags.color_accent)
       `,
-      args: [input.name, input.category, input.lat ?? null, input.lon ?? null],
+      args: [
+        input.name,
+        input.category,
+        input.lat ?? null,
+        input.lon ?? null,
+        input.colorBg ?? null,
+        input.colorAccent ?? null,
+      ],
     });
 
     const result = await db.execute({
-      sql: `SELECT id, name, category, lat, lon FROM tags WHERE name = ? AND category = ?`,
+      sql: `SELECT id, name, category, lat, lon, color_bg, color_accent FROM tags WHERE name = ? AND category = ?`,
       args: [input.name, input.category],
     });
 
@@ -141,7 +154,7 @@ export interface PlaceAlbum {
 
 export async function getPlaces(): Promise<PlaceAlbum[]> {
   const tagsResult = await db.execute(`
-    SELECT t.id, t.name, t.category, t.lat, t.lon, COUNT(pt.photo_id) as count
+    SELECT t.id, t.name, t.category, t.lat, t.lon, t.color_bg, t.color_accent, COUNT(pt.photo_id) as count
     FROM tags t
     JOIN photo_tags pt ON pt.tag_id = t.id
     WHERE t.category = 'place' AND t.lat IS NOT NULL AND t.lon IS NOT NULL
@@ -162,7 +175,7 @@ export async function getPlaces(): Promise<PlaceAlbum[]> {
 
 export async function getTags(): Promise<Tag[]> {
   const result = await db.execute(
-    `SELECT id, name, category, lat, lon FROM tags ORDER BY category, name`,
+    `SELECT id, name, category, lat, lon, color_bg, color_accent FROM tags ORDER BY category, name`,
   );
 
   return result.rows.map((row) =>
@@ -289,7 +302,7 @@ export async function getPhotos({
     photoIds.length > 0
       ? await db.execute({
           sql: `
-          SELECT pt.photo_id, t.id, t.name, t.category, t.lat, t.lon
+          SELECT pt.photo_id, t.id, t.name, t.category, t.lat, t.lon, t.color_bg, t.color_accent
           FROM photo_tags pt
           JOIN tags t ON t.id = pt.tag_id
           WHERE pt.photo_id IN (${tagPlaceholders})

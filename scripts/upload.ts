@@ -21,6 +21,8 @@ function getListFlag(name: string): string[] {
 const place = getFlag("--place");
 const lat = getFlag("--lat");
 const lon = getFlag("--lon");
+const colorBg = getFlag("--color-bg");
+const colorAccent = getFlag("--color-accent");
 const subjects = getListFlag("--subjects");
 const colors = getListFlag("--color");
 const edited = args.includes("--edited");
@@ -33,6 +35,8 @@ const tagInputs: NewTagInput[] = [
           category: "place" as const,
           lat: lat ? Number(lat) : null,
           lon: lon ? Number(lon) : null,
+          colorBg: colorBg ?? null,
+          colorAccent: colorAccent ?? null,
         },
       ]
     : []),

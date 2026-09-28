@@ -13,7 +13,13 @@ const MOCK_DIR = path.join(process.cwd(), "fotos");
 
 interface MockManifestEntry {
   photo: string;
-  place: { name: string; lat: number; lon: number };
+  place: {
+    name: string;
+    lat: number;
+    lon: number;
+    colorBg?: string;
+    colorAccent?: string;
+  };
   subjects: string[];
   colors: string[];
   edited: boolean;
@@ -44,18 +50,27 @@ function buildMockState(): { photos: Photo[]; tags: Tag[] } {
     category: TagCategory,
     lat: number | null = null,
     lon: number | null = null,
+    colorBg: string | null = null,
+    colorAccent: string | null = null,
   ): Tag {
     const key = `${category}:${name}`;
     const existing = tagsByKey.get(key);
     if (existing) return existing;
-    const tag: Tag = { id: nextTagId++, name, category, lat, lon };
+    const tag: Tag = { id: nextTagId++, name, category, lat, lon, colorBg, colorAccent };
     tagsByKey.set(key, tag);
     return tag;
   }
 
   const photos: Photo[] = entries.map((entry, index) => {
     const tags: Tag[] = [
-      getOrCreateTag(entry.place.name, "place", entry.place.lat, entry.place.lon),
+      getOrCreateTag(
+        entry.place.name,
+        "place",
+        entry.place.lat,
+        entry.place.lon,
+        entry.place.colorBg ?? null,
+        entry.place.colorAccent ?? null,
+      ),
       ...entry.subjects.map((name) => getOrCreateTag(name, "subject")),
       ...entry.colors.map((name) => getOrCreateTag(name, "color")),
     ];

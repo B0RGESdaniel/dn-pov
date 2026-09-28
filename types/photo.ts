@@ -24,6 +24,8 @@ export type Tag = {
   category: TagCategory;
   lat: number | null;
   lon: number | null;
+  colorBg: string | null;
+  colorAccent: string | null;
 };
 
 export type PhotosPage = {

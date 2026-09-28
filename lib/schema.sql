@@ -16,6 +16,8 @@ CREATE TABLE tags (
   category TEXT NOT NULL CHECK (category IN ('place', 'subject', 'color')),
   lat REAL,
   lon REAL,
+  color_bg TEXT,       -- só usado quando category = 'place'
+  color_accent TEXT,   -- só usado quando category = 'place'
   UNIQUE (name, category)
 );
 
