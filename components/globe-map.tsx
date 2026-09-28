@@ -39,19 +39,40 @@ function markerId(placeId: number): string {
   return `place-${placeId}`;
 }
 
-// Variants do slide horizontal do nome em foco e dos nomes anterior/próximo
-// nos cantos — mesma direção (via slideDirectionRef), distância proporcional
-// ao tamanho de cada texto.
-function slideVariants(distance: number) {
+// Distância (em vw) entre o slot central (local em foco) e os slots
+// anterior/próximo — o trilho inteiro (os 3 textos) se move nessa unidade.
+const SLOT_VW = 30;
+
+// Variants de um slot do "trilho" de nomes. offset é a posição relativa ao
+// local em foco (-1 anterior, 0 atual, 1 próximo) na renderização atual.
+// A continuidade do carrossel vem de reaproveitar a MESMA instância (mesma
+// key = tag.id) entre uma renderização e a seguinte: o local que era
+// "próximo" (offset 1) e virou o novo foco (offset 0) não é recriado — só
+// tem seu `animate` recalculado, e o framer-motion anima o "x"/escala/opacity
+// do valor antigo pro novo, dando a sensação de deslizar até o centro.
+//
+// `enter` é um valor fixo: só é lido no exato render em que o slot é criado,
+// então usar o `direction` corrente (fechado no momento da chamada) já basta.
+// `exit` precisa ser FUNÇÃO: quando um slot sai da janela de 3, ele não
+// renderiza de novo — o framer-motion reaplica os últimos props que ele
+// teve. Se `exit` fosse um valor fixo, ficaria com o `direction` "congelado"
+// de quando ainda estava visível, errado se o sentido do movimento mudar de
+// uma troca pra outra. Por isso é função: o `custom` passado ao
+// <AnimatePresence> (não ao slot) é reavaliado na hora da remoção, sempre
+// com o sentido atual.
+function slotVariants(offset: number, direction: number) {
+  const active = offset === 0;
   return {
-    enter: (direction: number) => ({
+    enter: { x: `${(offset + direction) * SLOT_VW}vw`, opacity: 0, scale: 0.2 },
+    center: {
+      x: `${offset * SLOT_VW}vw`,
+      opacity: active ? 1 : 0.3,
+      scale: active ? 1 : 0.34,
+    },
+    exit: (exitDirection: number) => ({
+      x: `${(offset - exitDirection) * SLOT_VW}vw`,
       opacity: 0,
-      x: direction > 0 ? distance : -distance,
-    }),
-    center: { opacity: 1, x: 0 },
-    exit: (direction: number) => ({
-      opacity: 0,
-      x: direction > 0 ? -distance : distance,
+      scale: 0.2,
     }),
   };
 }
@@ -229,8 +250,24 @@ export function GlobeMap({ places }: GlobeMapProps) {
   const activePlace = places.find((place) => place.tag.id === selectedId) ?? null;
   const activeIndex = places.findIndex((place) => place.tag.id === selectedId);
   const baseIndex = activeIndex === -1 ? 0 : activeIndex;
-  const prevPlace = places.length > 0 ? places[(baseIndex - 1 + places.length) % places.length] : null;
-  const nextPlace = places.length > 0 ? places[(baseIndex + 1) % places.length] : null;
+
+  // Janela de 3 slots do trilho (-1 anterior, 0 atual, 1 próximo). Com 1 ou 2
+  // locais no total, offsets diferentes podem cair no mesmo local — dedup por
+  // id pra não repetir key no AnimatePresence.
+  const seenPlaceIds = new Set<number>();
+  const trackSlots =
+    places.length === 0
+      ? []
+      : [-1, 0, 1]
+          .map((offset) => ({
+            offset,
+            place: places[(baseIndex + offset + places.length) % places.length],
+          }))
+          .filter(({ place }) => {
+            if (seenPlaceIds.has(place.tag.id)) return false;
+            seenPlaceIds.add(place.tag.id);
+            return true;
+          });
 
   return (
     <div className="flex h-[calc(100dvh-3rem)] flex-col">
@@ -249,63 +286,30 @@ export function GlobeMap({ places }: GlobeMapProps) {
         </p>
       ) : (
         <div className="relative flex flex-1 flex-col overflow-hidden">
-          <div className="pointer-events-none absolute left-4 top-16 z-10 max-w-[38vw] overflow-hidden sm:left-6 sm:top-20">
-            <AnimatePresence mode="popLayout" custom={slideDirectionRef.current} initial={false}>
-              {prevPlace && (
-                <motion.button
-                  key={prevPlace.tag.id}
-                  custom={slideDirectionRef.current}
-                  variants={slideVariants(24)}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                  onClick={() => focusPlace(prevPlace)}
-                  className="pointer-events-auto block truncate text-left font-display text-lg tracking-tight text-foreground/30 hover:text-foreground/60 sm:text-2xl md:text-3xl"
-                >
-                  {prevPlace.tag.name}
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="pointer-events-none absolute right-4 top-16 z-10 max-w-[38vw] overflow-hidden sm:right-6 sm:top-20">
-            <AnimatePresence mode="popLayout" custom={slideDirectionRef.current} initial={false}>
-              {nextPlace && (
-                <motion.button
-                  key={nextPlace.tag.id}
-                  custom={slideDirectionRef.current}
-                  variants={slideVariants(24)}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                  onClick={() => focusPlace(nextPlace)}
-                  className="pointer-events-auto block truncate text-right font-display text-lg tracking-tight text-foreground/30 hover:text-foreground/60 sm:text-2xl md:text-3xl"
-                >
-                  {nextPlace.tag.name}
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="flex shrink-0 justify-center overflow-hidden px-20 pb-2 pt-16 sm:px-28 sm:pt-20">
-            <AnimatePresence mode="popLayout" custom={slideDirectionRef.current} initial={false}>
-              {activePlace && (
-                <motion.h1
-                  key={activePlace.tag.id}
-                  custom={slideDirectionRef.current}
-                  variants={slideVariants(60)}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                  className="min-w-[4ch] text-center font-display text-4xl tracking-tight sm:text-6xl md:text-7xl"
-                >
-                  {activePlace.tag.name}
-                </motion.h1>
-              )}
-            </AnimatePresence>
+          <div className="shrink-0 pt-16 sm:pt-20">
+            <div className="relative h-20 overflow-hidden sm:h-28 md:h-32">
+              <AnimatePresence custom={slideDirectionRef.current} initial={false}>
+                {trackSlots.map(({ offset, place }) => (
+                  <motion.button
+                    key={place.tag.id}
+                    custom={slideDirectionRef.current}
+                    variants={slotVariants(offset, slideDirectionRef.current)}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
+                    onClick={() => focusPlace(place)}
+                    className={`absolute inset-0 flex items-center justify-center whitespace-nowrap px-4 text-center font-display tracking-tight text-4xl sm:text-6xl md:text-7xl ${
+                      offset === 0
+                        ? "z-10 text-foreground"
+                        : "text-foreground/30 hover:text-foreground/60"
+                    }`}
+                  >
+                    {place.tag.name}
+                  </motion.button>
+                ))}
+              </AnimatePresence>
+            </div>
           </div>
 
           <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-4 sm:px-6">
