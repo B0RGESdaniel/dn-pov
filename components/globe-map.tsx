@@ -19,68 +19,7 @@ interface GlobeMapProps {
 const AUTO_ROTATE_SPEED = 0.001;
 const DRAG_SENSITIVITY = 0.005;
 const FOCUS_EASING = 0.06;
-const SCALE_EASING = 0.08;
-const NORMAL_SCALE = 1;
-const REGION_ZOOM_SCALE = 2.4;
 const MARKER_SIZE = 0.02; // mesmo valor do showcase "Polaroids" de cobe.vercel.app
-
-type Region =
-  | "europa"
-  | "asia"
-  | "africa"
-  | "oceania"
-  | "america-sul"
-  | "america-norte"
-  | "brasil";
-
-const REGION_ORDER: Region[] = [
-  "europa",
-  "asia",
-  "africa",
-  "oceania",
-  "america-sul",
-  "america-norte",
-  "brasil",
-];
-
-const REGION_LABEL: Record<Region, string> = {
-  europa: "Europa",
-  asia: "Ásia",
-  africa: "África",
-  oceania: "Oceania",
-  "america-sul": "América do Sul",
-  "america-norte": "América do Norte",
-  brasil: "Brasil",
-};
-
-// Classificação geográfica aproximada por bounding box — o schema só guarda
-// lat/lon livre por tag de local, sem região. Brasil é checado antes da
-// América do Sul genérica porque o pedido trata os dois como grupos
-// distintos; Ásia fica como fallback final (cobre o resto do globo: Rússia,
-// Oriente Médio, sul/leste asiático) em vez de uma bounding box própria,
-// que seria irregular demais pra valer a pena.
-function regionForPlace(lat: number, lon: number): Region {
-  if (lat >= -34 && lat <= 6 && lon >= -74 && lon <= -32) return "brasil";
-  if (lat >= 34 && lat <= 72 && lon >= -25 && lon <= 45) return "europa";
-  if (lat >= -35 && lat <= 38 && lon >= -18 && lon <= 52) return "africa";
-  if (lat >= -50 && lat <= 25 && lon >= 110 && lon <= 180) return "oceania";
-  if (lat >= -56 && lat <= 13 && lon >= -82 && lon <= -34) return "america-sul";
-  if (lat >= 5 && lat <= 84 && lon >= -170 && lon <= -50)
-    return "america-norte";
-  return "asia";
-}
-
-function regionCentroid(
-  regionPlaces: PlaceAlbum[],
-): [lat: number, lon: number] {
-  const lat =
-    regionPlaces.reduce((sum, place) => sum + place.tag.lat, 0) /
-    regionPlaces.length;
-  const lon =
-    regionPlaces.reduce((sum, place) => sum + place.tag.lon, 0) /
-    regionPlaces.length;
-  return [lat, lon];
-}
 
 // positionAnchor e a custom property --polaroid-rotate ainda não estão no
 // CSSProperties do React/csstype — declaramos só o que precisamos além do
@@ -122,31 +61,11 @@ export function GlobeMap({ places }: GlobeMapProps) {
   const phiRef = useRef(0);
   const thetaRef = useRef(0.15);
   const targetRef = useRef<{ phi: number; theta: number } | null>(null);
-  const scaleRef = useRef(NORMAL_SCALE);
-  const targetScaleRef = useRef(NORMAL_SCALE);
-  // Enquanto uma região está com zoom, o auto-rotate fica suspenso mesmo
-  // depois do giro chegar no alvo — só volta a girar quando o zoom é
-  // desfeito (handleResetZoom), não sozinho como o foco num local avulso.
-  const rotationLockedRef = useRef(false);
   const pointerRef = useRef({ down: false, x: 0, y: 0 });
   const widthRef = useRef(560);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [zoomedRegion, setZoomedRegion] = useState<Region | null>(null);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
-
-  const regionGroups = useMemo(() => {
-    const groups = new Map<Region, PlaceAlbum[]>();
-    for (const place of places) {
-      const region = regionForPlace(place.tag.lat, place.tag.lon);
-      const list = groups.get(region);
-      if (list) list.push(place);
-      else groups.set(region, [place]);
-    }
-    return REGION_ORDER.filter((region) => groups.has(region)).map(
-      (region) => ({ region, places: groups.get(region)! }),
-    );
-  }, [places]);
 
   // O dot do marcador (size) marca o ponto exato; o cartão polaroid flutua
   // acima dele. O id é o que o cobe usa pra gerar os anchors/variáveis CSS
@@ -177,7 +96,6 @@ export function GlobeMap({ places }: GlobeMapProps) {
       theta: thetaRef.current,
       dark: 1,
       diffuse: 1.2,
-      scale: scaleRef.current,
       mapSamples: 16000,
       mapBrightness: 4.5,
       baseColor: [0.45, 0.6, 0.85],
@@ -198,22 +116,18 @@ export function GlobeMap({ places }: GlobeMapProps) {
           thetaRef.current +=
             (targetRef.current.theta - thetaRef.current) * FOCUS_EASING;
           if (
-            !rotationLockedRef.current &&
             Math.abs(targetRef.current.phi - phiRef.current) < 0.001 &&
             Math.abs(targetRef.current.theta - thetaRef.current) < 0.001
           ) {
             targetRef.current = null;
           }
-        } else if (!rotationLockedRef.current) {
+        } else {
           phiRef.current += AUTO_ROTATE_SPEED;
         }
       }
-      scaleRef.current +=
-        (targetScaleRef.current - scaleRef.current) * SCALE_EASING;
       globeRef.current?.update({
         phi: phiRef.current,
         theta: thetaRef.current,
-        scale: scaleRef.current,
         width: widthRef.current * 2,
         height: widthRef.current * 2,
       });
@@ -297,22 +211,6 @@ export function GlobeMap({ places }: GlobeMapProps) {
     );
   }
 
-  function handleZoomRegion(region: Region, regionPlaces: PlaceAlbum[]) {
-    const [lat, lon] = regionCentroid(regionPlaces);
-    const [phi, theta] = locationToAngles(lat, lon);
-    targetRef.current = { phi, theta };
-    targetScaleRef.current = REGION_ZOOM_SCALE;
-    rotationLockedRef.current = true;
-    setZoomedRegion(region);
-  }
-
-  function handleResetZoom() {
-    targetScaleRef.current = NORMAL_SCALE;
-    rotationLockedRef.current = false;
-    targetRef.current = null;
-    setZoomedRegion(null);
-  }
-
   const activePlace = places.find((place) => place.tag.id === selectedId) ?? null;
 
   return (
@@ -332,27 +230,8 @@ export function GlobeMap({ places }: GlobeMapProps) {
         </p>
       ) : (
         <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 pb-3 pt-16 sm:px-6">
-            {zoomedRegion ? (
-              <button
-                onClick={handleResetZoom}
-                className="flex items-center gap-2 rounded-full border border-accent bg-accent px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-background"
-              >
-                {REGION_LABEL[zoomedRegion]}
-                <span aria-hidden>×</span>
-              </button>
-            ) : (
-              regionGroups.map(({ region, places: regionPlaces }) => (
-                <button
-                  key={region}
-                  onClick={() => handleZoomRegion(region, regionPlaces)}
-                  className="rounded-full border border-border px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted hover:border-muted hover:text-foreground"
-                >
-                  {REGION_LABEL[region]}
-                </button>
-              ))
-            )}
-          </div>
+          {/* TODO (passo 3): carrossel de texto com o nome do lugar entra aqui. */}
+          <div className="shrink-0 pt-16" />
 
           <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-4 sm:px-6">
             <div
