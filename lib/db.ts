@@ -156,6 +156,33 @@ export async function getPlaces(): Promise<PlaceAlbum[]> {
   return attachCovers(placesBase);
 }
 
+export interface ColorAlbum {
+  tag: Tag & { colorBg: string; colorAccent: string };
+  count: number;
+  cover: Album["cover"];
+}
+
+export async function getColors(): Promise<ColorAlbum[]> {
+  const tagsResult = await db.execute(`
+    SELECT t.id, t.name, t.category, t.lat, t.lon, t.color_bg, t.color_accent, COUNT(pt.photo_id) as count
+    FROM tags t
+    JOIN photo_tags pt ON pt.tag_id = t.id
+    WHERE t.category = 'color' AND t.color_bg IS NOT NULL AND t.color_accent IS NOT NULL
+    GROUP BY t.id
+    ORDER BY t.name
+  `);
+
+  const colorsBase = tagsResult.rows.map((row) => ({
+    tag: rowToTag(row as unknown as Record<string, unknown>) as Tag & {
+      colorBg: string;
+      colorAccent: string;
+    },
+    count: Number(row.count),
+  }));
+
+  return attachCovers(colorsBase);
+}
+
 export async function getTags(): Promise<Tag[]> {
   const result = await db.execute(
     `SELECT id, name, category, lat, lon, color_bg, color_accent FROM tags ORDER BY category, name`,

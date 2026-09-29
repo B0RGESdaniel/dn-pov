@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { Photo, PhotosPage, Tag, TagCategory } from "@/types/photo";
-import { Album, PlaceAlbum } from "@/lib/db";
+import { Album, ColorAlbum, PlaceAlbum } from "@/lib/db";
 import { decodePhotoCursor, effectiveTakenAt, encodePhotoCursor } from "@/lib/photo-cursor";
 
 // Fonte de dados 100% local pra testar as páginas sem gastar Turso/R2.
@@ -21,7 +21,7 @@ interface MockManifestEntry {
     colorAccent?: string;
   };
   subjects: string[];
-  colors: string[];
+  colors: (string | { name: string; colorBg?: string; colorAccent?: string })[];
   edited: boolean;
   taken_at?: string;
   width?: number;
@@ -72,7 +72,18 @@ function buildMockState(): { photos: Photo[]; tags: Tag[] } {
         entry.place.colorAccent ?? null,
       ),
       ...entry.subjects.map((name) => getOrCreateTag(name, "subject")),
-      ...entry.colors.map((name) => getOrCreateTag(name, "color")),
+      ...entry.colors.map((color) =>
+        typeof color === "string"
+          ? getOrCreateTag(color, "color")
+          : getOrCreateTag(
+              color.name,
+              "color",
+              null,
+              null,
+              color.colorBg ?? null,
+              color.colorAccent ?? null,
+            ),
+      ),
     ];
 
     const url = `/api/mock-photo/${encodeURIComponent(entry.photo)}`;
@@ -183,6 +194,21 @@ export function getMockPlaces(): PlaceAlbum[] {
     .map((album) => ({
       ...album,
       tag: album.tag as Tag & { lat: number; lon: number },
+    }))
+    .sort((a, b) => a.tag.name.localeCompare(b.tag.name));
+}
+
+export function getMockColors(): ColorAlbum[] {
+  return getMockAlbums()
+    .filter(
+      (album) =>
+        album.tag.category === "color" &&
+        album.tag.colorBg != null &&
+        album.tag.colorAccent != null,
+    )
+    .map((album) => ({
+      ...album,
+      tag: album.tag as Tag & { colorBg: string; colorAccent: string },
     }))
     .sort((a, b) => a.tag.name.localeCompare(b.tag.name));
 }
