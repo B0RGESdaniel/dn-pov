@@ -16,6 +16,23 @@ const DRAG_SENSITIVITY = 0.005;
 const FOCUS_EASING = 0.06;
 const MARKER_SIZE = 0.02; // mesmo valor do showcase "Polaroids" de cobe.vercel.app
 
+// Cores padrão do globo (mesmas usadas na criação) — volta pra elas quando
+// o local em foco não tem colorAccent definido.
+const DEFAULT_BASE_COLOR: [number, number, number] = [0.25, 0.45, 0.85];
+const DEFAULT_GLOW_COLOR: [number, number, number] = [0.2, 0.35, 0.65];
+const COLOR_EASING = 0.05;
+
+// cobe usa RGB 0-1 (não hex, não 0-255).
+function hexToRgb01(hex: string): [number, number, number] {
+  const normalized = hex.replace("#", "");
+  const value = parseInt(normalized, 16);
+  return [
+    ((value >> 16) & 255) / 255,
+    ((value >> 8) & 255) / 255,
+    (value & 255) / 255,
+  ];
+}
+
 // positionAnchor e a custom property --polaroid-rotate ainda não estão no
 // CSSProperties do React/csstype — declaramos só o que precisamos além do
 // padrão.
@@ -100,6 +117,13 @@ export function GlobeMap({ places }: GlobeMapProps) {
   // esquerda, -1 = o inverso) — recalculado a cada troca de local, não
   // precisa ser state porque só é lido no render que a própria troca dispara.
   const slideDirectionRef = useRef(1);
+  // Cores atuais do globo (interpoladas a cada frame) e os alvos pros quais
+  // elas devem convergir — mesmo esquema de easing do phi/theta, só que pra
+  // cor, já que globe.update() troca a cor na hora (sem transição própria).
+  const baseColorRef = useRef<[number, number, number]>(DEFAULT_BASE_COLOR);
+  const targetBaseColorRef = useRef<[number, number, number]>(DEFAULT_BASE_COLOR);
+  const glowColorRef = useRef<[number, number, number]>(DEFAULT_GLOW_COLOR);
+  const targetGlowColorRef = useRef<[number, number, number]>(DEFAULT_GLOW_COLOR);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -134,9 +158,9 @@ export function GlobeMap({ places }: GlobeMapProps) {
       diffuse: 1.2,
       mapSamples: 16000,
       mapBrightness: 4.5,
-      baseColor: [0.25, 0.45, 0.85],
+      baseColor: DEFAULT_BASE_COLOR,
       markerColor: [0.894, 0.863, 0.784],
-      glowColor: [0.2, 0.35, 0.65],
+      glowColor: DEFAULT_GLOW_COLOR,
       markerElevation: 0,
       markers,
     });
@@ -161,11 +185,20 @@ export function GlobeMap({ places }: GlobeMapProps) {
           phiRef.current += AUTO_ROTATE_SPEED;
         }
       }
+      baseColorRef.current = baseColorRef.current.map(
+        (channel, i) => channel + (targetBaseColorRef.current[i] - channel) * COLOR_EASING,
+      ) as [number, number, number];
+      glowColorRef.current = glowColorRef.current.map(
+        (channel, i) => channel + (targetGlowColorRef.current[i] - channel) * COLOR_EASING,
+      ) as [number, number, number];
+
       globeRef.current?.update({
         phi: phiRef.current,
         theta: thetaRef.current,
         width: widthRef.current * 2,
         height: widthRef.current * 2,
+        baseColor: baseColorRef.current,
+        glowColor: glowColorRef.current,
       });
       frameId = requestAnimationFrame(animate);
     });
@@ -202,6 +235,13 @@ export function GlobeMap({ places }: GlobeMapProps) {
 
     if (place?.tag.colorAccent) root.style.setProperty("--accent", place.tag.colorAccent);
     else root.style.removeProperty("--accent");
+
+    targetBaseColorRef.current = place?.tag.colorBg
+      ? hexToRgb01(place.tag.colorBg)
+      : DEFAULT_BASE_COLOR;
+    targetGlowColorRef.current = place?.tag.colorAccent
+      ? hexToRgb01(place.tag.colorAccent)
+      : DEFAULT_GLOW_COLOR;
 
     return () => {
       root.style.removeProperty("--background");
