@@ -1,17 +1,12 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 import { ColorAlbum } from "@/lib/db";
-import { useSetActiveColor } from "@/components/color-theme-context";
 
 interface ColorGridProps {
   colors: ColorAlbum[];
 }
 
 export function ColorGrid({ colors }: ColorGridProps) {
-  const setActiveColor = useSetActiveColor();
-
   if (colors.length === 0) {
     return (
       <p className="p-8 pt-24 text-center font-mono text-xs uppercase tracking-widest text-muted">
@@ -26,9 +21,6 @@ export function ColorGrid({ colors }: ColorGridProps) {
         <Link
           key={tag.id}
           href={`/cor/${encodeURIComponent(tag.name)}`}
-          onClick={() =>
-            setActiveColor({ colorBg: tag.colorBg, colorAccent: tag.colorAccent })
-          }
           className="flex h-28 sm:h-36 md:h-44"
         >
           <div
