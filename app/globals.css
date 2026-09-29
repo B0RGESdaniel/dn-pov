@@ -27,6 +27,10 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* Só entra em jogo na tela de Mapa, que sobrescreve --background por
+     local em foco (components/globe-map.tsx) — nas demais páginas essa
+     variável nunca muda, então a transition fica inerte. */
+  transition: background-color 500ms ease;
 }
 
 /* Marcador polaroid grudado num ponto do globo (cobe), via CSS Anchor
@@ -67,6 +71,10 @@ body {
   box-shadow:
     0 0 0 2px var(--accent),
     0 2px 8px rgba(0, 0, 0, 0.45);
+  transition:
+    opacity 0.3s,
+    filter 0.3s,
+    box-shadow 0.5s;
 }
 
 .globe-marker-polaroid-thumb {

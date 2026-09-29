@@ -107,10 +107,8 @@ function RollingNavLink({
         focused.current = false;
         requestActive(hovered.current);
       }}
-      className={`rounded-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest ${
-        isActive
-          ? "bg-surface text-foreground"
-          : "text-muted hover:text-foreground"
+      className={`rounded-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-colors duration-500 ${
+        isActive ? "bg-accent text-background" : "text-accent hover:text-accent"
       }`}
     >
       <span className="relative block w-max overflow-hidden">
@@ -143,7 +141,10 @@ export function SiteNav() {
 
   return (
     <nav className="absolute top-0 z-20 flex w-full items-center gap-2 px-4 py-3 sm:px-6">
-      <Link href="/" className="mr-4 font-display text-base tracking-tight">
+      <Link
+        href="/"
+        className="mr-4 font-display text-base tracking-tight text-accent transition-colors duration-500"
+      >
         dn-pov
       </Link>
       {NAV_ITEMS.map((item) => (

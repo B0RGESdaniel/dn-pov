@@ -187,6 +187,28 @@ export function GlobeMap({ places }: GlobeMapProps) {
     globeRef.current?.update({ markers });
   }, [markers]);
 
+  // Tema dinâmico por lugar: sobrescreve --background/--accent em :root
+  // enquanto o local em foco tiver cor definida, com crossfade via CSS
+  // (transition em app/globals.css). Escrever em documentElement (não só no
+  // escopo da página) é proposital — o nav global também deve re-temar, já
+  // que ele não tem fundo próprio (é transparente sobre o body). Sem cor
+  // definida, cai de volta pro tema padrão do site.
+  useEffect(() => {
+    const place = places.find((item) => item.tag.id === selectedId) ?? null;
+    const root = document.documentElement;
+
+    if (place?.tag.colorBg) root.style.setProperty("--background", place.tag.colorBg);
+    else root.style.removeProperty("--background");
+
+    if (place?.tag.colorAccent) root.style.setProperty("--accent", place.tag.colorAccent);
+    else root.style.removeProperty("--accent");
+
+    return () => {
+      root.style.removeProperty("--background");
+      root.style.removeProperty("--accent");
+    };
+  }, [selectedId, places]);
+
   // Gira o globo até o local e marca a seleção. Usado pelo clique num
   // marcador, pelas setas ←/→ e pelos nomes anterior/próximo nos cantos.
   function focusPlace(place: PlaceAlbum) {
@@ -290,10 +312,10 @@ export function GlobeMap({ places }: GlobeMapProps) {
                     exit="exit"
                     transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
                     onClick={() => focusPlace(place)}
-                    className={`absolute inset-0 flex items-center justify-center whitespace-nowrap px-4 text-center font-display tracking-tight text-4xl sm:text-6xl md:text-7xl ${
+                    className={`absolute inset-0 flex items-center justify-center whitespace-nowrap px-4 text-center font-display tracking-tight transition-colors duration-500 text-4xl sm:text-6xl md:text-7xl ${
                       offset === 0
-                        ? "z-10 text-foreground"
-                        : "text-foreground/30 hover:text-foreground/60"
+                        ? "z-10 text-accent"
+                        : "text-accent/30 hover:text-accent/60"
                     }`}
                   >
                     {place.tag.name}
@@ -307,7 +329,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
             <button
               onClick={() => focusPlaceByOffset(-1)}
               aria-label="Local anterior"
-              className="absolute left-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground sm:left-6 sm:h-11 sm:w-11"
+              className="absolute left-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-accent/30 text-accent transition-colors duration-500 hover:border-accent sm:left-6 sm:h-11 sm:w-11"
             >
               ←
             </button>
@@ -377,7 +399,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
             <button
               onClick={() => focusPlaceByOffset(1)}
               aria-label="Próximo local"
-              className="absolute right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted hover:border-muted hover:text-foreground sm:right-6 sm:h-11 sm:w-11"
+              className="absolute right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-accent/30 text-accent transition-colors duration-500 hover:border-accent sm:right-6 sm:h-11 sm:w-11"
             >
               →
             </button>
@@ -387,7 +409,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
             <div className="flex shrink-0 justify-center px-4 pb-4 pt-1 sm:px-6">
               <Link
                 href={`/local/${encodeURIComponent(activePlace.tag.name)}`}
-                className="rounded-full border border-accent bg-accent px-6 py-2.5 font-mono text-[10px] uppercase tracking-widest text-background hover:opacity-90"
+                className="rounded-full border border-accent bg-accent px-6 py-2.5 font-mono text-[10px] uppercase tracking-widest text-background transition-colors duration-500 hover:opacity-90"
               >
                 Explorar
               </Link>
