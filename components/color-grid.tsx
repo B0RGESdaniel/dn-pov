@@ -21,7 +21,7 @@ export function ColorGrid({ colors }: ColorGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 px-4 pt-20 pb-6 sm:grid-cols-3 sm:gap-4 sm:px-6 sm:pt-24 md:grid-cols-4">
+    <div className="flex flex-col pt-16 sm:pt-20">
       {colors.map(({ tag, count, cover }) => (
         <Link
           key={tag.id}
@@ -29,34 +29,39 @@ export function ColorGrid({ colors }: ColorGridProps) {
           onClick={() =>
             setActiveColor({ colorBg: tag.colorBg, colorAccent: tag.colorAccent })
           }
-          className="group relative flex aspect-square flex-col items-center justify-center gap-2 overflow-hidden rounded-sm border border-border"
-          style={{ backgroundColor: tag.colorBg }}
+          className="flex h-28 sm:h-36 md:h-44"
         >
-          {cover && (
-            <Image
-              src={cover.thumbUrl}
-              alt={tag.name}
-              fill
-              className="object-cover opacity-30 transition-opacity duration-500 group-hover:opacity-15"
-              sizes="(min-width: 768px) 25vw, 50vw"
-              placeholder={cover.blurDataUrl ? "blur" : undefined}
-              blurDataURL={cover.blurDataUrl ?? undefined}
-            />
-          )}
-
-          <span
-            className="relative z-10 font-display text-xl tracking-tight sm:text-2xl"
-            style={{ color: tag.colorAccent }}
+          <div
+            className="flex w-[70%] flex-col items-center justify-center gap-1"
+            style={{ backgroundColor: tag.colorBg }}
           >
-            {tag.name}
-          </span>
+            <span
+              className="font-display text-2xl tracking-tight sm:text-4xl"
+              style={{ color: tag.colorAccent }}
+            >
+              {tag.name}
+            </span>
+            <span
+              className="font-mono text-[10px] uppercase tracking-widest opacity-70"
+              style={{ color: tag.colorAccent }}
+            >
+              {count} {count === 1 ? "foto" : "fotos"}
+            </span>
+          </div>
 
-          <span
-            className="relative z-10 font-mono text-[10px] uppercase tracking-widest opacity-70"
-            style={{ color: tag.colorAccent }}
-          >
-            {count} {count === 1 ? "foto" : "fotos"}
-          </span>
+          <div className="relative w-[30%] bg-surface">
+            {cover && (
+              <Image
+                src={cover.thumbUrl}
+                alt={tag.name}
+                fill
+                className="object-cover"
+                sizes="30vw"
+                placeholder={cover.blurDataUrl ? "blur" : undefined}
+                blurDataURL={cover.blurDataUrl ?? undefined}
+              />
+            )}
+          </div>
         </Link>
       ))}
     </div>
