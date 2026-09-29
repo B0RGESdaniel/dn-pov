@@ -6,12 +6,12 @@ import { upsertTags, NewTagInput } from "../lib/db";
 // ajustar um hex — upsertTags faz COALESCE, então valores atualizados aqui
 // sobrescrevem os antigos e tags já existentes não perdem outros campos.
 const COLORS: { name: string; colorBg: string; colorAccent: string }[] = [
-  { name: "azul", colorBg: "#0f1f3d", colorAccent: "#9db8e8" },
-  { name: "verde", colorBg: "#12261a", colorAccent: "#a3d9b1" },
-  { name: "vermelho", colorBg: "#331113", colorAccent: "#e8a3a8" },
-  { name: "amarelo", colorBg: "#332b0f", colorAccent: "#e8d79d" },
-  { name: "marrom", colorBg: "#2b1d14", colorAccent: "#d9b88f" },
-  { name: "rosa", colorBg: "#331420", colorAccent: "#f0aecb" },
+  { name: "azul", colorBg: "#1e3a8a", colorAccent: "#60a5fa" },
+  { name: "verde", colorBg: "#14532d", colorAccent: "#4ade80" },
+  { name: "vermelho", colorBg: "#7f1d1d", colorAccent: "#f87171" },
+  { name: "amarelo", colorBg: "#78350f", colorAccent: "#fbbf24" },
+  { name: "marrom", colorBg: "#431407", colorAccent: "#fb923c" },
+  { name: "rosa", colorBg: "#831843", colorAccent: "#FC9CCE" },
 ];
 
 const tagInputs: NewTagInput[] = COLORS.map((color) => ({
