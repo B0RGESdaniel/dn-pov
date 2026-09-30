@@ -12,6 +12,7 @@ export type Photo = {
   height: number | null;
   takenAt: string | null;
   edited: boolean;
+  memory: string | null;
   createdAt: string;
   tags: Tag[];
 };

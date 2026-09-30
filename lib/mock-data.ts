@@ -23,6 +23,7 @@ interface MockManifestEntry {
   subjects: string[];
   colors: (string | { name: string; colorBg?: string; colorAccent?: string })[];
   edited: boolean;
+  memory?: string;
   taken_at?: string;
   width?: number;
   height?: number;
@@ -97,6 +98,7 @@ function buildMockState(): { photos: Photo[]; tags: Tag[] } {
       height: entry.height ?? null,
       takenAt: parseTakenAt(entry.taken_at),
       edited: entry.edited,
+      memory: entry.memory ?? null,
       createdAt: new Date(0).toISOString(),
       tags,
     };
@@ -162,6 +164,19 @@ export function getMockPhotos({
       : null;
 
   return { photos: page, nextCursor };
+}
+
+export function getMockMemories(): Photo[] {
+  const { photos } = buildMockState();
+
+  return photos
+    .filter((photo) => photo.memory != null)
+    .sort((a, b) => {
+      const aKey = effectiveTakenAt(a.takenAt);
+      const bKey = effectiveTakenAt(b.takenAt);
+      if (aKey !== bKey) return aKey < bKey ? 1 : -1;
+      return b.id - a.id;
+    });
 }
 
 function getMockAlbums(): (Album & { covers: CoverPhoto[] })[] {

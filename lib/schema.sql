@@ -7,6 +7,7 @@ CREATE TABLE photos (
   height INTEGER,
   taken_at TEXT,
   edited INTEGER NOT NULL DEFAULT 0,
+  memory TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

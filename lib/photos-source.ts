@@ -1,11 +1,13 @@
 import {
   getColors as getRealGetColors,
+  getMemories as getRealGetMemories,
   getPhotos as getRealGetPhotos,
   getPlaces as getRealGetPlaces,
   getTags as getRealGetTags,
 } from "@/lib/db";
 import {
   getMockColors,
+  getMockMemories,
   getMockPhotos,
   getMockPlaces,
   getMockTags,
@@ -20,3 +22,4 @@ export const getPhotos = USE_MOCK ? getMockPhotos : getRealGetPhotos;
 export const getPlaces = USE_MOCK ? getMockPlaces : getRealGetPlaces;
 export const getColors = USE_MOCK ? getMockColors : getRealGetColors;
 export const getTags = USE_MOCK ? getMockTags : getRealGetTags;
+export const getMemories = USE_MOCK ? getMockMemories : getRealGetMemories;

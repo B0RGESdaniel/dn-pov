@@ -210,7 +210,7 @@ export async function getTags(): Promise<Tag[]> {
 export async function insertPhoto(data: NewPhoto): Promise<number> {
   const result = await db.execute({
     sql: `
-      INSERT INTO photos (url, thumb_url, blur_data_url, width, height, taken_at, edited) VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO photos (url, thumb_url, blur_data_url, width, height, taken_at, edited, memory) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `,
     args: [
       data.url,
@@ -220,6 +220,7 @@ export async function insertPhoto(data: NewPhoto): Promise<number> {
       data.height,
       data.takenAt,
       data.edited ? 1 : 0,
+      data.memory,
     ],
   });
 
@@ -233,6 +234,60 @@ export async function linkPhotoTags({ photoId, tagIds }: LinkPhotoTagsProps) {
       args: [photoId, tagId],
     });
   }
+}
+
+function rowToPhoto(row: Record<string, unknown>): Photo {
+  return {
+    id: row.id as number,
+    url: row.url as string,
+    thumbUrl: row.thumb_url as string,
+    blurDataUrl: row.blur_data_url as string | null,
+    width: row.width as number | null,
+    height: row.height as number | null,
+    takenAt: row.taken_at as string | null,
+    edited: Boolean(row.edited),
+    memory: row.memory as string | null,
+    createdAt: row.created_at as string,
+    tags: [],
+  };
+}
+
+async function attachTags(photos: Photo[]): Promise<Photo[]> {
+  if (photos.length === 0) return photos;
+
+  const photoIds = photos.map((photo) => photo.id);
+  const placeholders = photoIds.map(() => "?").join(", ");
+
+  const tagsResult = await db.execute({
+    sql: `
+      SELECT pt.photo_id, t.id, t.name, t.category, t.lat, t.lon, t.color_bg, t.color_accent
+      FROM photo_tags pt
+      JOIN tags t ON t.id = pt.tag_id
+      WHERE pt.photo_id IN (${placeholders})
+    `,
+    args: photoIds,
+  });
+
+  return photos.map((photo) => ({
+    ...photo,
+    tags: tagsResult.rows
+      .filter((row) => row.photo_id === photo.id)
+      .map((row) => rowToTag(row as unknown as Record<string, unknown>)),
+  }));
+}
+
+export async function getMemories(): Promise<Photo[]> {
+  const result = await db.execute(`
+    SELECT photos.* FROM photos
+    WHERE memory IS NOT NULL
+    ORDER BY COALESCE(photos.taken_at, '${NULL_DATE_SENTINEL}') DESC, photos.id DESC
+  `);
+
+  const photos = result.rows.map((row) =>
+    rowToPhoto(row as unknown as Record<string, unknown>),
+  );
+
+  return attachTags(photos);
 }
 
 function categoryFilterClause(
@@ -301,46 +356,16 @@ export async function getPhotos({
 
   const hasNextPage = result.rows.length > limit;
 
-  const photos: Photo[] = result.rows.slice(0, limit).map((row) => ({
-    id: row.id as number,
-    url: row.url as string,
-    thumbUrl: row.thumb_url as string,
-    blurDataUrl: row.blur_data_url as string | null,
-    width: row.width as number | null,
-    height: row.height as number | null,
-    takenAt: row.taken_at as string | null,
-    edited: Boolean(row.edited),
-    createdAt: row.created_at as string,
-    tags: [],
-  }));
+  const photos: Photo[] = result.rows
+    .slice(0, limit)
+    .map((row) => rowToPhoto(row as unknown as Record<string, unknown>));
 
   const lastPhoto = photos[photos.length - 1];
   const nextCursor = hasNextPage
     ? encodePhotoCursor(lastPhoto.takenAt, lastPhoto.id)
     : null;
 
-  const photoIds = photos.map((p) => p.id);
-  const tagPlaceholders = photoIds.map(() => "?").join(", ");
-
-  const tagsResult =
-    photoIds.length > 0
-      ? await db.execute({
-          sql: `
-          SELECT pt.photo_id, t.id, t.name, t.category, t.lat, t.lon, t.color_bg, t.color_accent
-          FROM photo_tags pt
-          JOIN tags t ON t.id = pt.tag_id
-          WHERE pt.photo_id IN (${tagPlaceholders})
-        `,
-          args: photoIds,
-        })
-      : { rows: [] };
-
-  const photosWithTags: Photo[] = photos.map((photo) => ({
-    ...photo,
-    tags: tagsResult.rows
-      .filter((row) => row.photo_id === photo.id)
-      .map((row) => rowToTag(row as unknown as Record<string, unknown>)),
-  }));
+  const photosWithTags = await attachTags(photos);
 
   return {
     photos: photosWithTags,
