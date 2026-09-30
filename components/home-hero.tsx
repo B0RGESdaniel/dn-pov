@@ -13,10 +13,31 @@ interface HomeHeroProps {
 }
 
 const DESTINATIONS = [
-  { href: "/mural", label: "mural", Icon: Images },
-  { href: "/mapa", label: "mapa", Icon: Earth },
-  { href: "/cor", label: "cor", Icon: Palette },
-  { href: "/memorias", label: "memórias", Icon: SquareBookmark },
+  {
+    href: "/mural",
+    label: "MURAL",
+    Icon: Images,
+    className:
+      "bg-accent text-background font-fraunces font-semibold normal-case",
+  },
+  {
+    href: "/mapa",
+    label: "mapa",
+    Icon: Earth,
+    className: "bg-white text-black font-mono uppercase",
+  },
+  {
+    href: "/cor",
+    label: "cor",
+    Icon: Palette,
+    className: "bg-white text-black font-mono uppercase",
+  },
+  {
+    href: "/memorias",
+    label: "memórias",
+    Icon: SquareBookmark,
+    className: "bg-white text-black font-mono uppercase",
+  },
 ] as const;
 
 function photoAlt(photo: Photo): string {
@@ -62,14 +83,14 @@ export function HomeHero({ photos }: HomeHeroProps) {
           </p>
         </div>
 
-        <nav className="flex flex-wrap items-center justify-center gap-2">
+        <nav className="flex flex-col items-center gap-3">
           {DESTINATIONS.map((destination) => (
             <Link
               key={destination.href}
               href={destination.href}
-              className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-black transition-transform hover:scale-105"
+              className={`flex w-64 items-center justify-center gap-2.5 px-8 py-4 text-sm tracking-widest transition-transform hover:scale-105 md:w-72 ${destination.className}`}
             >
-              <destination.Icon className="h-3.5 w-3.5" strokeWidth={2} />
+              <destination.Icon className="h-5 w-5" strokeWidth={2} />
               {destination.label}
             </Link>
           ))}
