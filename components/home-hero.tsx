@@ -3,7 +3,6 @@
 import { CSSProperties, useEffect } from "react";
 import Link from "next/link";
 import { motion, stagger, useAnimate } from "motion/react";
-import { Earth, Images, Palette, SquareBookmark } from "lucide-react";
 
 import Floating, { FloatingElement } from "@/components/ui/parallax-floating";
 import { Photo } from "@/types/photo";
@@ -15,30 +14,26 @@ interface HomeHeroProps {
 const DESTINATIONS = [
   {
     href: "/mural",
-    label: "MURAL",
-    Icon: Images,
+    label: "mural",
     className:
       "bg-accent text-background font-fraunces font-semibold normal-case",
   },
   {
     href: "/mapa",
     label: "world",
-    Icon: Earth,
     className: "bg-[#4073d9] text-foreground font-mono font-semibold uppercase",
   },
   {
     href: "/cor",
     label: "cor",
-    Icon: Palette,
     className:
-      "text-black font-display tracking-tight uppercase border-2 border-black shadow-[4px_4px_0_0_#000] !transition-all !duration-150 hover:!scale-100 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000]",
+      "text-black font-display text-4xl tracking-tight uppercase border-2 border-black shadow-[4px_4px_0_0_#000] !transition-all !duration-150 hover:!scale-100 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000]",
   },
   {
     href: "/memorias",
     label: "memórias",
-    Icon: SquareBookmark,
     className:
-      "relative overflow-hidden text-foreground font-handwritten text-2xl normal-case",
+      "relative overflow-hidden text-foreground font-handwritten text-4xl normal-case",
   },
 ] as const;
 
@@ -72,17 +67,20 @@ const CorLetterColors = ["#eab308", "#2563eb", "#16a34a", "#dc2626", "#ec4899"];
 function CorLabel({ label }: { label: string }) {
   return (
     <span className="flex">
-      {label.split("").map((char, index) => (
-        <span
-          key={index}
-          style={{
-            color: CorLetterColors[index % CorLetterColors.length],
-            textShadow: "1.5px 1.5px 0 #000",
-          }}
-        >
-          {char}
-        </span>
-      ))}
+      {label
+        .toUpperCase()
+        .split("")
+        .map((char, index) => (
+          <span
+            key={index}
+            style={{
+              color: CorLetterColors[index % CorLetterColors.length],
+              textShadow: "1.5px 1.5px 0 #000",
+            }}
+          >
+            {char}
+          </span>
+        ))}
     </span>
   );
 }
@@ -132,7 +130,7 @@ export function HomeHero({ photos }: HomeHeroProps) {
               key={destination.href}
               href={destination.href}
               style={BUTTON_BACKGROUNDS[destination.href]}
-              className={`flex w-64 items-center justify-center gap-2.5 px-8 py-4 text-sm tracking-widest transition-transform hover:scale-105 md:w-72 ${destination.className}`}
+              className={`flex w-64 items-center justify-center px-8 py-4 text-2xl tracking-widest transition-transform hover:scale-105 md:w-72 ${destination.className}`}
             >
               {destination.href === "/memorias" && (
                 <span
@@ -140,12 +138,11 @@ export function HomeHero({ photos }: HomeHeroProps) {
                   className="noise-texture pointer-events-none absolute inset-0 mix-blend-overlay opacity-70"
                 />
               )}
-              <span className="relative z-10 flex items-center gap-2.5">
-                <destination.Icon className="h-5 w-5" strokeWidth={2} />
+              <span className="relative z-10">
                 {destination.href === "/cor" ? (
                   <CorLabel label={destination.label} />
                 ) : (
-                  destination.label
+                  destination.label.toUpperCase()
                 )}
               </span>
             </Link>
