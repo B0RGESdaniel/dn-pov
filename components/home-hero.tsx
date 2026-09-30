@@ -22,9 +22,9 @@ const DESTINATIONS = [
   },
   {
     href: "/mapa",
-    label: "mapa",
+    label: "world",
     Icon: Earth,
-    className: "bg-white text-black font-mono uppercase",
+    className: "bg-[#4073d9] text-foreground font-mono font-semibold uppercase",
   },
   {
     href: "/cor",
