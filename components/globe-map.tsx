@@ -334,7 +334,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
         </p>
       ) : (
         <div className="relative flex flex-1 flex-col overflow-hidden">
-          <div className="shrink-0 pt-16 sm:pt-20">
+          <div className="shrink-0 pt-24 sm:pt-32">
             <div className="relative h-20 overflow-hidden sm:h-28 md:h-32">
               <AnimatePresence custom={slideDirectionRef.current} initial={false}>
                 {trackSlots.map(({ offset, place }) => (
@@ -360,7 +360,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
             </div>
           </div>
 
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pt-2 pb-12 sm:px-6 sm:pt-4 sm:pb-16">
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pb-20 sm:px-6 sm:pb-28">
             <button
               onClick={() => focusPlaceByOffset(-1)}
               aria-label="Local anterior"
