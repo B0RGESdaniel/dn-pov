@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/mural", label: "mural" },
   { href: "/mapa", label: "mapa" },
   { href: "/cor", label: "cor" },
+  { href: "/memorias", label: "memórias" },
 ];
 
 const outgoingVariants = {

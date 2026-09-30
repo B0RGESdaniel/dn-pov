@@ -29,12 +29,7 @@ export function ColorGrid({ colors }: ColorGridProps) {
           >
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 mix-blend-overlay opacity-50"
-              style={{
-                backgroundImage:
-                  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='1.5' intercept='-0.25'/%3E%3CfeFuncG type='linear' slope='1.5' intercept='-0.25'/%3E%3CfeFuncB type='linear' slope='1.5' intercept='-0.25'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")",
-                backgroundRepeat: "repeat",
-              }}
+              className="noise-texture pointer-events-none absolute inset-0 mix-blend-overlay opacity-50"
             />
             <span
               className="relative z-10 font-display text-2xl tracking-tight sm:text-4xl"

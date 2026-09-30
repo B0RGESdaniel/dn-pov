@@ -33,6 +33,7 @@ CREATE TABLE photos (
   height INTEGER,
   taken_at TEXT,
   edited INTEGER NOT NULL DEFAULT 0,   -- original (0) vs. editada (1)
+  memory TEXT,         -- texto opcional; toda foto com memory != NULL entra na tela de Memórias
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -69,6 +70,7 @@ Flags, todas opcionais e manuais (sem geocoding/detecção automática):
 - `--subjects <a,b,c>` — tags de assunto (lista livre)
 - `--color <nome>` — tag de cor (lista livre)
 - `--edited` — marca as fotos do lote como editadas (padrão: original)
+- `--memory "texto"` — preenche a coluna `memory`; foto entra na tela de Memórias (`/memorias`)
 
 1. Lê as fotos de uma pasta local
 2. `sharp` gera 3 variantes por foto: thumbnail, medium (full) e um LQIP em base64 (blur placeholder)
@@ -90,6 +92,7 @@ Nunca mexe no código do site nem exige redeploy. Não existe upload via web —
 - `next/image` com `placeholder="blur"` usando o `blur_data_url` do banco
 - Lightbox própria (`components/lightbox.tsx`) ao clicar na foto — modal com navegação por seta/teclado (sem lib externa, sem transição de elemento compartilhado)
 - Nav global fixa (`components/site-nav.tsx`) com destaque da rota ativa
+- `/memorias` — card stack de polaroids (`components/memory-stack.tsx`, `motion/react`) só com fotos que têm `memory` preenchido; legenda em fonte manuscrita (Caveat, `font-handwritten`) na faixa inferior da polaroid. Arrastar a foto do topo cicla a pilha; clicar nela dá um scale up (como se tirasse a foto da pilha). Fundo estilo cortiça (`.noise-texture` em `globals.css`, cor sólida + ruído SVG por cima) e nav com `--accent` sobrescrito pro `--foreground` via `TagTheme` (mais contraste sobre o marrom)
 
 ## Convenções de código
 
@@ -108,8 +111,9 @@ Nunca mexe no código do site nem exige redeploy. Não existe upload via web —
 6. ~~Lightbox~~
 7. ~~Álbuns (`/albuns`)~~
 8. ~~Mapa (`/mapa`) — globo via lib `cobe`, pins a partir de tags de local com lat/lon; sem fotos fixas~~
-9. Canvas arrastável/zoom no feed principal (substituindo o grid simples), se fizer sentido depois de usar o app
-10. Cache na edge / revalidação — parcialmente feito (`Cache-Control` na API); revisitar se cache mais agressivo compensar
+9. ~~Memórias (`/memorias`) — coluna `memory` em `photos`, card stack de polaroids~~
+10. Canvas arrastável/zoom no feed principal (substituindo o grid simples), se fizer sentido depois de usar o app
+11. Cache na edge / revalidação — parcialmente feito (`Cache-Control` na API); revisitar se cache mais agressivo compensar
 
 ## Divergências do protótipo (Claude Design)
 
