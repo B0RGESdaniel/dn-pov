@@ -37,7 +37,8 @@ const DESTINATIONS = [
     href: "/memorias",
     label: "memórias",
     Icon: SquareBookmark,
-    className: "bg-white text-black font-mono uppercase",
+    className:
+      "relative overflow-hidden text-foreground font-handwritten text-2xl normal-case",
   },
 ] as const;
 
@@ -52,6 +53,16 @@ const CorGridBackground: CSSProperties = {
   backgroundImage:
     "linear-gradient(to right, rgba(37, 99, 235, 0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(37, 99, 235, 0.3) 1px, transparent 1px)",
   backgroundSize: "14px 14px",
+};
+
+// Mesmo fundo de /memorias (app/(site)/memorias/page.tsx): cor sólida de
+// cortiça — o ruído por cima entra à parte, via .noise-texture (precisa
+// de um elemento próprio pro mix-blend-overlay funcionar).
+const MemoriasBackground: CSSProperties = { backgroundColor: "#ba8345" };
+
+const BUTTON_BACKGROUNDS: Record<string, CSSProperties> = {
+  "/cor": CorGridBackground,
+  "/memorias": MemoriasBackground,
 };
 
 // Letra a letra, cada uma com sua cor + text-shadow duro (sem blur), no
@@ -120,15 +131,23 @@ export function HomeHero({ photos }: HomeHeroProps) {
             <Link
               key={destination.href}
               href={destination.href}
-              style={destination.href === "/cor" ? CorGridBackground : undefined}
+              style={BUTTON_BACKGROUNDS[destination.href]}
               className={`flex w-64 items-center justify-center gap-2.5 px-8 py-4 text-sm tracking-widest transition-transform hover:scale-105 md:w-72 ${destination.className}`}
             >
-              <destination.Icon className="h-5 w-5" strokeWidth={2} />
-              {destination.href === "/cor" ? (
-                <CorLabel label={destination.label} />
-              ) : (
-                destination.label
+              {destination.href === "/memorias" && (
+                <span
+                  aria-hidden
+                  className="noise-texture pointer-events-none absolute inset-0 mix-blend-overlay opacity-70"
+                />
               )}
+              <span className="relative z-10 flex items-center gap-2.5">
+                <destination.Icon className="h-5 w-5" strokeWidth={2} />
+                {destination.href === "/cor" ? (
+                  <CorLabel label={destination.label} />
+                ) : (
+                  destination.label
+                )}
+              </span>
             </Link>
           ))}
         </nav>
