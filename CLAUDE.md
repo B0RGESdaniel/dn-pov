@@ -19,7 +19,7 @@ Imagens **nunca** ficam no repositório nem no banco — só URLs e metadados. O
 
 - Dark-only (sem alternância clara), inspirado no protótipo: fundo `#141414`, texto `#f2f0ec`, accent `#e4dcc8`, superfícies/bordas em tons de cinza escuro
 - Tokens definidos em `app/globals.css` via `@theme` (`--color-background`, `--color-surface`, `--color-border`, `--color-foreground`, `--color-muted`, `--color-accent`)
-- Tipografia via `next/font/google`: Archivo (texto/UI), Archivo Black (`font-display`, títulos), JetBrains Mono (`font-mono`, labels/contadores em uppercase)
+- Tipografia via `next/font/google`: Poppins como única fonte da aplicação (`font-sans`, `font-display` e `font-mono` todos apontam pra ela — `font-display` força `font-weight: 700` pra manter o peso visual dos títulos)
 
 ## Modelo de dados
 

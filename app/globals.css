@@ -17,9 +17,13 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
 
-  --font-sans: var(--font-archivo), Helvetica, sans-serif;
-  --font-display: var(--font-archivo-black), Helvetica, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), monospace;
+  --font-sans: var(--font-poppins), Helvetica, sans-serif;
+  --font-display: var(--font-poppins), Helvetica, sans-serif;
+  --font-mono: var(--font-poppins), Helvetica, sans-serif;
+}
+
+.font-display {
+  font-weight: 700;
 }
 
 body {
@@ -91,7 +95,7 @@ body {
   left: 0;
   right: 0;
   text-align: center;
-  font-family: var(--font-jetbrains-mono), monospace;
+  font-family: var(--font-poppins), Helvetica, sans-serif;
   font-size: 0.375rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;

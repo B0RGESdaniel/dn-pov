@@ -83,11 +83,11 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
       {/* Sobreposto à foto (não ocupa espaço em layout), sempre visível. */}
       <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 p-4">
         <div className="flex items-center gap-3">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
+          <span className="font-mono text-xs uppercase tracking-widest text-foreground">
             {index + 1}/{photos.length}
           </span>
           {photo.edited && (
-            <span className="rounded-sm bg-accent px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-background">
+            <span className="rounded-sm bg-accent px-2 py-0.5 font-mono text-xs uppercase tracking-widest text-background">
               editada
             </span>
           )}
