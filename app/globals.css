@@ -20,6 +20,7 @@
   --font-sans: var(--font-poppins), Helvetica, sans-serif;
   --font-display: var(--font-poppins), Helvetica, sans-serif;
   --font-mono: var(--font-poppins), Helvetica, sans-serif;
+  --font-handwritten: var(--font-caveat), cursive;
 }
 
 .font-display {
@@ -110,6 +111,60 @@ body {
   .globe-marker-polaroid-caption {
     bottom: 4px;
     font-size: 0.5rem;
+  }
+}
+
+/* Pilha de polaroids da tela de Memórias (/memorias). Cada card é
+   posicionado absoluto e centralizado no container (top/left 50% +
+   translate no transform inline); rotação, escala, opacidade e z-index de
+   cada card vêm de estilo inline calculado em components/memory-stack.tsx
+   (mesma lógica do card stack de motion.dev, ver card-stack.md). */
+.memory-stack-root {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 26rem;
+  aspect-ratio: 3 / 4;
+}
+
+.memory-stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  list-style: none;
+}
+
+.memory-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 78%;
+  background: #fff;
+  padding: 10px 10px 0;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.memory-card-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #e5e5e5;
+}
+
+.memory-card-caption {
+  padding: 8px 6px 18px;
+  text-align: center;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: #222;
+}
+
+@media (min-width: 768px) {
+  .memory-card-caption {
+    font-size: 1.5rem;
   }
 }
 
