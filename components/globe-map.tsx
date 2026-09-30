@@ -360,7 +360,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
             </div>
           </div>
 
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-4 sm:px-6">
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pt-2 pb-12 sm:px-6 sm:pt-4 sm:pb-16">
             <button
               onClick={() => focusPlaceByOffset(-1)}
               aria-label="Local anterior"
@@ -438,18 +438,18 @@ export function GlobeMap({ places }: GlobeMapProps) {
             >
               →
             </button>
-          </div>
 
-          {activePlace && (
-            <div className="flex shrink-0 justify-center px-4 pb-4 pt-1 sm:px-6">
-              <Link
-                href={`/local/${encodeURIComponent(activePlace.tag.name)}`}
-                className="rounded-full border border-accent bg-accent px-6 py-2.5 font-mono text-xs uppercase tracking-widest text-background transition-colors duration-500 hover:opacity-90"
-              >
-                Explorar
-              </Link>
-            </div>
-          )}
+            {activePlace && (
+              <div className="absolute bottom-8 z-10 flex justify-center sm:bottom-12">
+                <Link
+                  href={`/local/${encodeURIComponent(activePlace.tag.name)}`}
+                  className="rounded-full border border-accent bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:bg-accent hover:text-background"
+                >
+                  Explorar
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
