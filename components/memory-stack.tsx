@@ -14,30 +14,13 @@ const MAX_ROTATE = 14;
 // tirada do quadro pra ler a memória com mais calma.
 const PICKED_SCALE = 1.18;
 
-function mix(from: number, to: number, ratio: number) {
-  return from + (to - from) * ratio;
-}
-
-// Posição e ângulo iniciais de cada polaroid, determinísticos por índice
-// (mesma foto sempre nasce no mesmo lugar ao recarregar a página) — um grid
-// solto com jitter e rotação alternando lado, espalhado com boa separação
-// via razão áurea (índices vizinhos não ficam com ângulos quase iguais).
-function scatter(index: number, total: number) {
-  const angleFraction = (index * 0.618033988749895) % 1;
-  const rotate =
-    (index % 2 === 0 ? 1 : -1) * MAX_ROTATE * (0.4 + 0.6 * angleFraction);
-
-  const columns = Math.max(2, Math.min(4, Math.ceil(Math.sqrt(total))));
-  const col = index % columns;
-  const row = Math.floor(index / columns);
-  const jitterX = mix(-6, 6, (index * 0.374) % 1);
-  const jitterY = mix(-6, 6, (index * 0.912) % 1);
-
-  const left =
-    mix(14, 86, columns === 1 ? 0.5 : col / (columns - 1)) + jitterX;
-  const top = 16 + row * 28 + jitterY;
-
-  return { rotate, left, top };
+// Ângulo de repouso de cada polaroid, determinístico por índice (mesma foto
+// sempre nasce com o mesmo ângulo) — alterna lado e varia a magnitude de
+// forma bem espalhada (razão áurea), pra dar aquele ar de pilha jogada, sem
+// ângulos quase iguais entre fotos vizinhas.
+function fanRotation(index: number) {
+  const fraction = (index * 0.618033988749895) % 1;
+  return (index % 2 === 0 ? 1 : -1) * MAX_ROTATE * (0.4 + 0.6 * fraction);
 }
 
 export function MemoryStack({ photos }: MemoryStackProps) {
@@ -54,17 +37,14 @@ export function MemoryStack({ photos }: MemoryStackProps) {
   return (
     <DragElements
       className="memory-board"
-      itemStyle={(index) => {
-        const { left, top } = scatter(index, photos.length);
-        return { left: `${left}%`, top: `${top}%` };
-      }}
+      itemStyle={() => ({ left: "50%", top: "50%", translate: "-50% -50%" })}
       onItemTap={(index) => {
         const photo = photos[index];
         setPickedId((current) => (current === photo.id ? null : photo.id));
       }}
     >
       {photos.map((photo, index) => {
-        const { rotate } = scatter(index, photos.length);
+        const rotate = fanRotation(index);
         const picked = pickedId === photo.id;
 
         return (
