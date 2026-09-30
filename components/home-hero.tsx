@@ -3,6 +3,7 @@
 import { CSSProperties, useEffect } from "react";
 import Link from "next/link";
 import { motion, stagger, useAnimate } from "motion/react";
+import { Earth, Images, Palette, SquareBookmark } from "lucide-react";
 
 import Floating, { FloatingElement } from "@/components/ui/parallax-floating";
 import { Photo } from "@/types/photo";
@@ -12,10 +13,10 @@ interface HomeHeroProps {
 }
 
 const DESTINATIONS = [
-  { href: "/mural", label: "mural" },
-  { href: "/mapa", label: "mapa" },
-  { href: "/cor", label: "cor" },
-  { href: "/memorias", label: "memórias" },
+  { href: "/mural", label: "mural", Icon: Images },
+  { href: "/mapa", label: "mapa", Icon: Earth },
+  { href: "/cor", label: "cor", Icon: Palette },
+  { href: "/memorias", label: "memórias", Icon: SquareBookmark },
 ] as const;
 
 function photoAlt(photo: Photo): string {
@@ -66,8 +67,9 @@ export function HomeHero({ photos }: HomeHeroProps) {
             <Link
               key={destination.href}
               href={destination.href}
-              className="rounded-full bg-white px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-black transition-transform hover:scale-105"
+              className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-black transition-transform hover:scale-105"
             >
+              <destination.Icon className="h-3.5 w-3.5" strokeWidth={2} />
               {destination.label}
             </Link>
           ))}
