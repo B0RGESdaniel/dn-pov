@@ -114,7 +114,7 @@ function RollingNavLink({
       className={`rounded-sm px-3 py-1.5 font-mono text-xs uppercase tracking-widest transition-colors duration-500 ${
         isActive ? "bg-accent text-background" : "text-accent hover:text-accent"
       } ${
-        neobrutalist
+        neobrutalist && isActive
           ? "border-2 border-black !transition-all !duration-150 shadow-[3px_3px_0_0_#000] hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[1.5px_1.5px_0_0_#000]"
           : ""
       }`}
