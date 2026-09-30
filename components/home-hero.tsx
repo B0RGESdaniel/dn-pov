@@ -14,24 +14,25 @@ interface HomeHeroProps {
 const DESTINATIONS = [
   {
     href: "/mural",
-    label: "mural",
+    label: "MURAL",
     className:
       "bg-accent text-background font-fraunces font-semibold normal-case",
   },
   {
     href: "/mapa",
-    label: "world",
-    className: "bg-[#4073d9] text-foreground font-mono font-semibold uppercase",
+    label: "MAPA",
+    className:
+      "relative overflow-hidden bg-[#4073d9] text-foreground text-3xl font-bold",
   },
   {
     href: "/cor",
-    label: "cor",
+    label: "CORES",
     className:
-      "text-black font-display text-4xl tracking-tight uppercase border-2 border-black shadow-[4px_4px_0_0_#000] !transition-all !duration-150 hover:!scale-100 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000]",
+      "text-black font-display text-5xl tracking-tight uppercase border-2 border-black",
   },
   {
     href: "/memorias",
-    label: "memórias",
+    label: "MEMÓRIAS",
     className:
       "relative overflow-hidden text-foreground font-handwritten text-4xl normal-case",
   },
@@ -62,7 +63,9 @@ const BUTTON_BACKGROUNDS: Record<string, CSSProperties> = {
 
 // Letra a letra, cada uma com sua cor + text-shadow duro (sem blur), no
 // mesmo espírito neobrutalist dos quadrados de components/color-grid.tsx.
-const CorLetterColors = ["#eab308", "#2563eb", "#16a34a", "#dc2626", "#ec4899"];
+// Mesmos colorAccent das tags reais de /cor (scripts/seed-colors.ts):
+// vermelho, verde, azul, amarelo, rosa.
+const CorLetterColors = ["#f87171", "#4ade80", "#60a5fa", "#fbbf24", "#FC9CCE"];
 
 function CorLabel({ label }: { label: string }) {
   return (
@@ -75,7 +78,7 @@ function CorLabel({ label }: { label: string }) {
             key={index}
             style={{
               color: CorLetterColors[index % CorLetterColors.length],
-              textShadow: "1.5px 1.5px 0 #000",
+              textShadow: "3px 3px 0 #000",
             }}
           >
             {char}
@@ -130,7 +133,7 @@ export function HomeHero({ photos }: HomeHeroProps) {
               key={destination.href}
               href={destination.href}
               style={BUTTON_BACKGROUNDS[destination.href]}
-              className={`flex w-64 items-center justify-center px-8 py-4 text-2xl tracking-widest transition-transform hover:scale-105 md:w-72 ${destination.className}`}
+              className={`flex h-16 w-64 items-center justify-center px-8 text-2xl tracking-widest transition-transform hover:scale-105 md:w-72 ${destination.className}`}
             >
               {destination.href === "/memorias" && (
                 <span
@@ -138,11 +141,26 @@ export function HomeHero({ photos }: HomeHeroProps) {
                   className="noise-texture pointer-events-none absolute inset-0 mix-blend-overlay opacity-70"
                 />
               )}
-              <span className="relative z-10">
+              {destination.href === "/mapa" && (
+                <img
+                  src="/earth.svg"
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute bottom-0 left-1/2 w-40 -translate-x-1/2 translate-y-[65%]"
+                />
+              )}
+              <span
+                className="relative z-10"
+                style={
+                  destination.href === "/mapa"
+                    ? { textShadow: "2px 2px 0 rgba(0, 0, 0, 0.35)" }
+                    : undefined
+                }
+              >
                 {destination.href === "/cor" ? (
                   <CorLabel label={destination.label} />
                 ) : (
-                  destination.label.toUpperCase()
+                  destination.label
                 )}
               </span>
             </Link>
