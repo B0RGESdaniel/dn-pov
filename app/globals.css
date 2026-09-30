@@ -115,10 +115,11 @@ body {
 }
 
 /* Pilha de polaroids da tela de Memórias (/memorias). Cada card é
-   posicionado absoluto e centralizado no container (top/left 50% +
-   translate no transform inline); rotação, escala, opacidade e z-index de
-   cada card vêm de estilo inline calculado em components/memory-stack.tsx
-   (mesma lógica do card stack de motion.dev, ver card-stack.md). */
+   posicionado absoluto e centralizado no container (top/left 50% + `translate`
+   CSS, independente do `transform` que o motion/react usa pra x/rotate/scale
+   animados); a ordem/rotação/escala de cada card vem de components/memory-stack.tsx
+   (mesma lógica do card stack de motion.dev, ver card-stack.md — clique traz
+   o card pra frente, arrastar o card do topo cicla a pilha). */
 .memory-stack-root {
   position: relative;
   display: flex;
@@ -138,6 +139,7 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
+  translate: -50% -50%;
   width: 78%;
   background: #fff;
   padding: 10px 10px 0;
