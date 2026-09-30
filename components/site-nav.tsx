@@ -83,6 +83,13 @@ const NAV_FONT_CLASSES: Record<NavFont, string> = {
   fraunces: "font-fraunces text-sm font-semibold",
 };
 
+// Transição do fade ao trocar de fonte entre rotas — mascara a troca de
+// font-family (que não dá pra interpolar) com um fade rápido em vez do
+// salto instantâneo de classe CSS. Só fade-in (sem exit/AnimatePresence):
+// esperar um exit terminar pra só então montar o novo deixava o nav vazio
+// por um instante, o que lia como um glitch em vez de fluido.
+const fontSwapTransition = { duration: 0.2, ease: "easeOut" as const };
+
 function RollingNavLink({
   href,
   label,
@@ -122,8 +129,6 @@ function RollingNavLink({
         requestActive(hovered.current);
       }}
       className={`rounded-sm px-3 py-1.5 uppercase tracking-widest transition-colors duration-500 ${
-        NAV_FONT_CLASSES[font]
-      } ${
         isActive ? "bg-accent text-background" : "text-accent hover:text-accent"
       } ${
         neobrutalist && isActive
@@ -131,7 +136,13 @@ function RollingNavLink({
           : ""
       }`}
     >
-      <span className="relative block w-max overflow-hidden">
+      <motion.span
+        key={font}
+        className={`relative block w-max overflow-hidden ${NAV_FONT_CLASSES[font]}`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={fontSwapTransition}
+      >
         <motion.span
           className="block whitespace-nowrap"
           variants={outgoingVariants}
@@ -151,7 +162,7 @@ function RollingNavLink({
         >
           {label}
         </motion.span>
-      </span>
+      </motion.span>
     </Link>
   );
 }
