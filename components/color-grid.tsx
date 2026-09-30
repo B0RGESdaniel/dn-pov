@@ -2,12 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { motion } from "motion/react";
 import { ColorAlbum } from "@/lib/db";
 import { useColorTransition } from "@/components/color-transition";
 
 interface ColorGridProps {
   colors: ColorAlbum[];
 }
+
+// Mesmo delay em cascata do PhotoMasonry (components/photo-masonry.tsx) ao
+// entrar na tela — aqui não precisa de ciclo/módulo porque a lista de cores
+// não tem scroll infinito.
+const STAGGER_STEP = 0.05;
 
 // Cursor de conta-gotas (color picker) ao passar por cima de um quadrado de
 // cor — path real do ícone "pipette" do Lucide (ISC), com contorno branco
@@ -34,43 +40,50 @@ export function ColorGrid({ colors }: ColorGridProps) {
 
   return (
     <div className="grid grid-cols-2 gap-3 px-4 pt-20 pb-6 sm:grid-cols-3 sm:gap-4 sm:px-6 sm:pt-24 md:grid-cols-4">
-      {colors.map(({ tag }) => (
-        <ColorSwatch key={tag.id} tag={tag} />
+      {colors.map(({ tag }, index) => (
+        <ColorSwatch key={tag.id} tag={tag} index={index} />
       ))}
     </div>
   );
 }
 
-function ColorSwatch({ tag }: { tag: ColorAlbum["tag"] }) {
+function ColorSwatch({ tag, index }: { tag: ColorAlbum["tag"]; index: number }) {
   const { trigger } = useColorTransition();
   const [clicked, setClicked] = useState(false);
   const href = `/cor/${encodeURIComponent(tag.name)}`;
 
   return (
-    <Link
-      href={href}
-      onClick={(event) => {
-        // Cliques com modificador (nova aba, etc.) seguem o comportamento
-        // nativo do Link — só interceptamos o clique "normal" pra tocar a
-        // animação antes de navegar de verdade.
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-          return;
-        }
-        event.preventDefault();
-        setClicked(true);
-        trigger(event.currentTarget.getBoundingClientRect(), tag.colorBg, href);
-      }}
-      className="relative flex aspect-square items-center justify-center overflow-hidden rounded-sm border-2 border-black shadow-[8px_8px_0_0_#000] transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[4px_4px_0_0_#000]"
-      style={{ backgroundColor: tag.colorBg, cursor: COLOR_PICKER_CURSOR }}
+    <motion.div
+      initial={{ opacity: 0, y: -60 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.5, ease: "easeOut", delay: index * STAGGER_STEP }}
     >
-      <span
-        className={`relative z-10 font-display text-xl tracking-tight transition-opacity duration-150 sm:text-2xl ${
-          clicked ? "opacity-0" : "opacity-100"
-        }`}
-        style={{ color: tag.colorAccent }}
+      <Link
+        href={href}
+        onClick={(event) => {
+          // Cliques com modificador (nova aba, etc.) seguem o comportamento
+          // nativo do Link — só interceptamos o clique "normal" pra tocar a
+          // animação antes de navegar de verdade.
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+            return;
+          }
+          event.preventDefault();
+          setClicked(true);
+          trigger(event.currentTarget.getBoundingClientRect(), tag.colorBg, href);
+        }}
+        className="relative flex aspect-square items-center justify-center overflow-hidden rounded-sm border-2 border-black shadow-[8px_8px_0_0_#000] transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[4px_4px_0_0_#000]"
+        style={{ backgroundColor: tag.colorBg, cursor: COLOR_PICKER_CURSOR }}
       >
-        {tag.name.toUpperCase()}
-      </span>
-    </Link>
+        <span
+          className={`relative z-10 font-display text-xl tracking-tight transition-opacity duration-150 sm:text-2xl ${
+            clicked ? "opacity-0" : "opacity-100"
+          }`}
+          style={{ color: tag.colorAccent }}
+        >
+          {tag.name.toUpperCase()}
+        </span>
+      </Link>
+    </motion.div>
   );
 }
