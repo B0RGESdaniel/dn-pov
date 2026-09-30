@@ -20,7 +20,7 @@ export function ColorGrid({ colors }: ColorGridProps) {
         <Link
           key={tag.id}
           href={`/cor/${encodeURIComponent(tag.name)}`}
-          className="relative flex aspect-square items-center justify-center overflow-hidden rounded-sm border border-border"
+          className="relative flex aspect-square items-center justify-center overflow-hidden rounded-sm border-2 border-black shadow-[8px_8px_0_0_#000] transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[4px_4px_0_0_#000]"
           style={{ backgroundColor: tag.colorBg }}
         >
           <div
