@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ColorAlbum } from "@/lib/db";
 
@@ -16,47 +15,24 @@ export function ColorGrid({ colors }: ColorGridProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4 pt-16 sm:gap-6 sm:pt-20">
-      {colors.map(({ tag, covers }) => (
+    <div className="grid grid-cols-2 gap-3 px-4 pt-20 pb-6 sm:grid-cols-3 sm:gap-4 sm:px-6 sm:pt-24 md:grid-cols-4">
+      {colors.map(({ tag }) => (
         <Link
           key={tag.id}
           href={`/cor/${encodeURIComponent(tag.name)}`}
-          className="flex h-28 sm:h-36 md:h-44"
+          className="relative flex aspect-square items-center justify-center overflow-hidden rounded-sm border border-border"
+          style={{ backgroundColor: tag.colorBg }}
         >
           <div
-            className="isolate relative flex w-[40%] flex-col items-center justify-center gap-1 overflow-hidden sm:w-[30%]"
-            style={{ backgroundColor: tag.colorBg }}
+            aria-hidden
+            className="noise-texture pointer-events-none absolute inset-0 mix-blend-overlay opacity-50"
+          />
+          <span
+            className="relative z-10 font-display text-xl tracking-tight sm:text-2xl"
+            style={{ color: tag.colorAccent }}
           >
-            <div
-              aria-hidden
-              className="noise-texture pointer-events-none absolute inset-0 mix-blend-overlay opacity-50"
-            />
-            <span
-              className="relative z-10 font-display text-2xl tracking-tight sm:text-4xl"
-              style={{ color: tag.colorAccent }}
-            >
-              {tag.name.toUpperCase()}
-            </span>
-          </div>
-
-          {covers.length > 0 && (
-            <div className="flex w-[60%] sm:w-[70%]">
-              {covers.map((cover) => (
-                <div key={cover.id} className="relative flex-1 bg-surface">
-                  <Image
-                    src={cover.thumbUrl}
-                    alt={tag.name}
-                    fill
-                    className="object-cover"
-                    sizes="(min-width: 768px) 23vw, 33vw"
-                    placeholder={cover.blurDataUrl ? "blur" : undefined}
-                    blurDataURL={cover.blurDataUrl ?? undefined}
-                  />
-                  <div aria-hidden className="pointer-events-none absolute inset-0 bg-black/25" />
-                </div>
-              ))}
-            </div>
-          )}
+            {tag.name.toUpperCase()}
+          </span>
         </Link>
       ))}
     </div>
