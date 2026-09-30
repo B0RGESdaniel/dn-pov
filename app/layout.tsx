@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Caveat, Poppins } from "next/font/google";
+import { Caveat, Fraunces, Poppins } from "next/font/google";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -18,6 +18,14 @@ const caveat = Caveat({
   display: "swap",
 });
 
+// Só usada na tela de /mural (font-fraunces).
+const fraunces = Fraunces({
+  variable: "--font-fraunces-serif",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "dn-pov",
   description: "Arquivo pessoal de fotos",
@@ -28,7 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="pt-BR"
       data-scroll-behavior="smooth"
-      className={`${poppins.variable} ${caveat.variable} h-full scroll-smooth antialiased`}
+      className={`${poppins.variable} ${caveat.variable} ${fraunces.variable} h-full scroll-smooth antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
         {children}

@@ -21,6 +21,7 @@
   --font-display: var(--font-poppins), Helvetica, sans-serif;
   --font-mono: var(--font-poppins), Helvetica, sans-serif;
   --font-handwritten: var(--font-caveat), cursive;
+  --font-fraunces: var(--font-fraunces-serif), serif;
 }
 
 .font-display {

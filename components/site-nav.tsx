@@ -75,18 +75,26 @@ function useRollingActive(reduceMotion: boolean | null) {
   return { active, requestActive, completeAnimation };
 }
 
+type NavFont = "mono" | "handwritten" | "fraunces";
+
+const NAV_FONT_CLASSES: Record<NavFont, string> = {
+  mono: "font-mono text-xs",
+  handwritten: "font-handwritten text-sm",
+  fraunces: "font-fraunces text-sm font-semibold",
+};
+
 function RollingNavLink({
   href,
   label,
   isActive,
   neobrutalist,
-  handwritten,
+  font = "mono",
 }: {
   href: string;
   label: string;
   isActive: boolean;
   neobrutalist?: boolean;
-  handwritten?: boolean;
+  font?: NavFont;
 }) {
   const reduceMotion = useReducedMotion();
   const hovered = useRef(false);
@@ -114,7 +122,7 @@ function RollingNavLink({
         requestActive(hovered.current);
       }}
       className={`rounded-sm px-3 py-1.5 uppercase tracking-widest transition-colors duration-500 ${
-        handwritten ? "font-handwritten text-sm" : "font-mono text-xs"
+        NAV_FONT_CLASSES[font]
       } ${
         isActive ? "bg-accent text-background" : "text-accent hover:text-accent"
       } ${
@@ -154,9 +162,14 @@ export function SiteNav() {
   // — não é um tema por rota de verdade, só um toggle local.
   const neobrutalist = pathname === "/cor" || pathname.startsWith("/cor/");
 
-  // Fonte manuscrita (mesma das legendas das polaroids) só em /memorias.
-  const handwritten =
-    pathname === "/memorias" || pathname.startsWith("/memorias/");
+  // Fonte do nav por rota: manuscrita (mesma das legendas das polaroids) em
+  // /memorias, serifada (Fraunces) em /mural, monoespaçada no resto.
+  const navFont: NavFont =
+    pathname === "/memorias" || pathname.startsWith("/memorias/")
+      ? "handwritten"
+      : pathname === "/mural" || pathname.startsWith("/mural/")
+        ? "fraunces"
+        : "mono";
 
   // Com uma cor selecionada (/cor/<nome>), o item "cor" do nav mostra o nome
   // dela em vez do label padrão.
@@ -181,7 +194,7 @@ export function SiteNav() {
             pathname === item.href || pathname.startsWith(`${item.href}/`)
           }
           neobrutalist={neobrutalist}
-          handwritten={handwritten}
+          font={navFont}
         />
       ))}
     </nav>
