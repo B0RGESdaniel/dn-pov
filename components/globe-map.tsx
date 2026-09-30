@@ -442,7 +442,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
             {activePlace && (
               <div className="absolute bottom-8 z-10 flex justify-center sm:bottom-12">
                 <Link
-                  href={`/local/${encodeURIComponent(activePlace.tag.name)}`}
+                  href={`/mapa/${encodeURIComponent(activePlace.tag.name)}`}
                   className="rounded-full border border-accent bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:bg-accent hover:text-background"
                 >
                   Explorar

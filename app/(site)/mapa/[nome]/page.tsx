@@ -3,7 +3,7 @@ import { getPhotos, getPlaces } from "@/lib/photos-source";
 import { TagTheme } from "@/components/tag-theme";
 import { PhotoMasonry } from "@/components/photo-masonry";
 
-export default async function LocalPage({ params }: PageProps<"/local/[nome]">) {
+export default async function MapaNomePage({ params }: PageProps<"/mapa/[nome]">) {
   const { nome } = await params;
   const name = decodeURIComponent(nome);
 
