@@ -26,6 +26,7 @@ const colorAccent = getFlag("--color-accent");
 const subjects = getListFlag("--subjects");
 const colors = getListFlag("--color");
 const edited = args.includes("--edited");
+const memory = getFlag("--memory") ?? null;
 
 const tagInputs: NewTagInput[] = [
   ...(place
@@ -101,6 +102,7 @@ for (const file of imageFiles) {
     height: metadata.height,
     takenAt: null,
     edited,
+    memory,
   });
 
   await linkPhotoTags({ photoId, tagIds });
