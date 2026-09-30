@@ -14,6 +14,8 @@ interface HomeHeroProps {
 const DESTINATIONS = [
   { href: "/mural", label: "mural" },
   { href: "/mapa", label: "mapa" },
+  { href: "/cor", label: "cor" },
+  { href: "/memorias", label: "memórias" },
 ] as const;
 
 function photoAlt(photo: Photo): string {
