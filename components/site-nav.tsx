@@ -80,11 +80,13 @@ function RollingNavLink({
   label,
   isActive,
   neobrutalist,
+  handwritten,
 }: {
   href: string;
   label: string;
   isActive: boolean;
   neobrutalist?: boolean;
+  handwritten?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
   const hovered = useRef(false);
@@ -111,7 +113,9 @@ function RollingNavLink({
         focused.current = false;
         requestActive(hovered.current);
       }}
-      className={`rounded-sm px-3 py-1.5 font-mono text-xs uppercase tracking-widest transition-colors duration-500 ${
+      className={`rounded-sm px-3 py-1.5 uppercase tracking-widest transition-colors duration-500 ${
+        handwritten ? "font-handwritten text-sm" : "font-mono text-xs"
+      } ${
         isActive ? "bg-accent text-background" : "text-accent hover:text-accent"
       } ${
         neobrutalist && isActive
@@ -150,6 +154,10 @@ export function SiteNav() {
   // — não é um tema por rota de verdade, só um toggle local.
   const neobrutalist = pathname === "/cor" || pathname.startsWith("/cor/");
 
+  // Fonte manuscrita (mesma das legendas das polaroids) só em /memorias.
+  const handwritten =
+    pathname === "/memorias" || pathname.startsWith("/memorias/");
+
   // Com uma cor selecionada (/cor/<nome>), o item "cor" do nav mostra o nome
   // dela em vez do label padrão.
   const corName = pathname.startsWith("/cor/")
@@ -173,6 +181,7 @@ export function SiteNav() {
             pathname === item.href || pathname.startsWith(`${item.href}/`)
           }
           neobrutalist={neobrutalist}
+          handwritten={handwritten}
         />
       ))}
     </nav>
