@@ -9,6 +9,20 @@ interface ColorGridProps {
   colors: ColorAlbum[];
 }
 
+// Cursor de conta-gotas (color picker) ao passar por cima de um quadrado de
+// cor — path real do ícone "pipette" do Lucide (ISC), com contorno branco
+// por baixo do preto pra ficar visível em qualquer colorBg. Hotspot na
+// ponta do pingo (canto inferior esquerdo do ícone, escalado do viewBox
+// 24x24 original pro tamanho renderizado de 22x22).
+const PIPETTE_PATHS = [
+  "m12 9-8.414 8.414A2 2 0 0 0 3 18.828v1.344a2 2 0 0 1-.586 1.414A2 2 0 0 1 3.828 21h1.344a2 2 0 0 0 1.414-.586L15 12",
+  "m18 9 .4.4a1 1 0 1 1-3 3l-3.8-3.8a1 1 0 1 1 3-3l.4.4 3.4-3.4a1 1 0 1 1 3 3z",
+  "m2 22 .414-.414",
+];
+const COLOR_PICKER_CURSOR_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none'><g stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'>${PIPETTE_PATHS.map((d) => `<path d='${d}'/>`).join("")}</g><g stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>${PIPETTE_PATHS.map((d) => `<path d='${d}'/>`).join("")}</g></svg>`;
+
+const COLOR_PICKER_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(COLOR_PICKER_CURSOR_SVG)}") 2 20, pointer`;
+
 export function ColorGrid({ colors }: ColorGridProps) {
   if (colors.length === 0) {
     return (
@@ -47,7 +61,7 @@ function ColorSwatch({ tag }: { tag: ColorAlbum["tag"] }) {
         trigger(event.currentTarget.getBoundingClientRect(), tag.colorBg, href);
       }}
       className="relative flex aspect-square items-center justify-center overflow-hidden rounded-sm border-2 border-black shadow-[8px_8px_0_0_#000] transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[4px_4px_0_0_#000]"
-      style={{ backgroundColor: tag.colorBg }}
+      style={{ backgroundColor: tag.colorBg, cursor: COLOR_PICKER_CURSOR }}
     >
       <span
         className={`relative z-10 font-display text-xl tracking-tight transition-opacity duration-150 sm:text-2xl ${
