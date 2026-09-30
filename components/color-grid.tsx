@@ -1,11 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { ColorAlbum } from "@/lib/db";
+import { useColorTransition } from "@/components/color-transition";
 
 interface ColorGridProps {
   colors: ColorAlbum[];
 }
 
 export function ColorGrid({ colors }: ColorGridProps) {
+  const triggerColorTransition = useColorTransition();
+
   if (colors.length === 0) {
     return (
       <p className="p-8 pt-24 text-center font-mono text-xs uppercase tracking-widest text-muted">
@@ -20,6 +25,12 @@ export function ColorGrid({ colors }: ColorGridProps) {
         <Link
           key={tag.id}
           href={`/cor/${encodeURIComponent(tag.name)}`}
+          onClick={(event) =>
+            triggerColorTransition(
+              { x: event.clientX, y: event.clientY },
+              tag.colorBg,
+            )
+          }
           className="relative flex aspect-square items-center justify-center overflow-hidden rounded-sm border-2 border-black shadow-[8px_8px_0_0_#000] transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[4px_4px_0_0_#000]"
           style={{ backgroundColor: tag.colorBg }}
         >
