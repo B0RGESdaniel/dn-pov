@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { getColors, getPhotos } from "@/lib/photos-source";
 import { TagTheme } from "@/components/tag-theme";
-import { ColorHero } from "@/components/color-hero";
 import { PhotoMasonry } from "@/components/photo-masonry";
 
 export default async function CorNomePage({ params }: PageProps<"/cor/[nome]">) {
@@ -17,14 +16,14 @@ export default async function CorNomePage({ params }: PageProps<"/cor/[nome]">) 
   return (
     <>
       <TagTheme colorBg={color.tag.colorBg} colorAccent={color.tag.colorAccent} />
-      <ColorHero tag={color.tag}>
+      <div className="pt-16 sm:pt-20">
         <PhotoMasonry
           key={name}
           initialPhotos={initialPage.photos}
           initialCursor={initialPage.nextCursor}
           filters={{ color: [name] }}
         />
-      </ColorHero>
+      </div>
     </>
   );
 }
