@@ -11,7 +11,6 @@ interface GlobeMapProps {
   places: PlaceAlbum[];
 }
 
-const AUTO_ROTATE_SPEED = 0.001;
 const DRAG_SENSITIVITY = 0.005;
 const FOCUS_EASING = 0.06;
 const MARKER_SIZE = 0.02; // mesmo valor do showcase "Polaroids" de cobe.vercel.app
@@ -169,20 +168,16 @@ export function GlobeMap({ places }: GlobeMapProps) {
     // globe.update() a cada frame. Essa mesma chamada já recalcula os
     // anchors dos marcadores, então as labels HTML acompanham o giro sozinhas.
     let frameId = requestAnimationFrame(function animate() {
-      if (!pointerRef.current.down) {
-        if (targetRef.current) {
-          phiRef.current +=
-            (targetRef.current.phi - phiRef.current) * FOCUS_EASING;
-          thetaRef.current +=
-            (targetRef.current.theta - thetaRef.current) * FOCUS_EASING;
-          if (
-            Math.abs(targetRef.current.phi - phiRef.current) < 0.001 &&
-            Math.abs(targetRef.current.theta - thetaRef.current) < 0.001
-          ) {
-            targetRef.current = null;
-          }
-        } else {
-          phiRef.current += AUTO_ROTATE_SPEED;
+      if (!pointerRef.current.down && targetRef.current) {
+        phiRef.current +=
+          (targetRef.current.phi - phiRef.current) * FOCUS_EASING;
+        thetaRef.current +=
+          (targetRef.current.theta - thetaRef.current) * FOCUS_EASING;
+        if (
+          Math.abs(targetRef.current.phi - phiRef.current) < 0.001 &&
+          Math.abs(targetRef.current.theta - thetaRef.current) < 0.001
+        ) {
+          targetRef.current = null;
         }
       }
       baseColorRef.current = baseColorRef.current.map(
