@@ -79,19 +79,22 @@ export async function upsertTags(inputs: NewTagInput[]): Promise<Tag[]> {
   return tags;
 }
 
+export interface CoverPhoto {
+  id: number;
+  thumbUrl: string;
+  blurDataUrl: string | null;
+}
+
 export interface Album {
   tag: Tag;
   count: number;
-  cover: {
-    id: number;
-    thumbUrl: string;
-    blurDataUrl: string | null;
-  } | null;
+  cover: CoverPhoto | null;
 }
 
 async function attachCovers<T extends { tag: Tag }>(
   base: T[],
-): Promise<(T & { cover: Album["cover"] })[]> {
+  limit = 1,
+): Promise<(T & { covers: CoverPhoto[] })[]> {
   if (base.length === 0) return [];
 
   const tagIds = base.map((item) => item.tag.id);
@@ -99,33 +102,40 @@ async function attachCovers<T extends { tag: Tag }>(
 
   const coversResult = await db.execute({
     sql: `
-      SELECT pt.tag_id, p.id, p.thumb_url, p.blur_data_url
-      FROM photo_tags pt
-      JOIN photos p ON p.id = pt.photo_id
-      WHERE pt.tag_id IN (${placeholders})
-      ORDER BY p.id DESC
+      SELECT tag_id, id, thumb_url, blur_data_url
+      FROM (
+        SELECT
+          pt.tag_id as tag_id,
+          p.id as id,
+          p.thumb_url as thumb_url,
+          p.blur_data_url as blur_data_url,
+          ROW_NUMBER() OVER (PARTITION BY pt.tag_id ORDER BY p.id DESC) as rn
+        FROM photo_tags pt
+        JOIN photos p ON p.id = pt.photo_id
+        WHERE pt.tag_id IN (${placeholders})
+      )
+      WHERE rn <= ?
+      ORDER BY tag_id, rn
     `,
-    args: tagIds,
+    args: [...tagIds, limit],
   });
 
-  const coverByTag = new Map<
-    number,
-    { id: number; thumbUrl: string; blurDataUrl: string | null }
-  >();
+  const coversByTag = new Map<number, CoverPhoto[]>();
 
   for (const row of coversResult.rows) {
     const tagId = row.tag_id as number;
-    if (coverByTag.has(tagId)) continue;
-    coverByTag.set(tagId, {
+    const list = coversByTag.get(tagId) ?? [];
+    list.push({
       id: row.id as number,
       thumbUrl: row.thumb_url as string,
       blurDataUrl: row.blur_data_url as string | null,
     });
+    coversByTag.set(tagId, list);
   }
 
   return base.map((item) => ({
     ...item,
-    cover: coverByTag.get(item.tag.id) ?? null,
+    covers: coversByTag.get(item.tag.id) ?? [],
   }));
 }
 
@@ -153,13 +163,17 @@ export async function getPlaces(): Promise<PlaceAlbum[]> {
     count: Number(row.count),
   }));
 
-  return attachCovers(placesBase);
+  const placesWithCovers = await attachCovers(placesBase, 1);
+  return placesWithCovers.map(({ covers, ...rest }) => ({
+    ...rest,
+    cover: covers[0] ?? null,
+  }));
 }
 
 export interface ColorAlbum {
   tag: Tag & { colorBg: string; colorAccent: string };
   count: number;
-  cover: Album["cover"];
+  covers: CoverPhoto[];
 }
 
 export async function getColors(): Promise<ColorAlbum[]> {
@@ -180,7 +194,7 @@ export async function getColors(): Promise<ColorAlbum[]> {
     count: Number(row.count),
   }));
 
-  return attachCovers(colorsBase);
+  return attachCovers(colorsBase, 3);
 }
 
 export async function getTags(): Promise<Tag[]> {

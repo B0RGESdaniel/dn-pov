@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { Photo, PhotosPage, Tag, TagCategory } from "@/types/photo";
-import { Album, ColorAlbum, PlaceAlbum } from "@/lib/db";
+import { Album, ColorAlbum, CoverPhoto, PlaceAlbum } from "@/lib/db";
 import { decodePhotoCursor, effectiveTakenAt, encodePhotoCursor } from "@/lib/photo-cursor";
 
 // Fonte de dados 100% local pra testar as páginas sem gastar Turso/R2.
@@ -164,24 +164,32 @@ export function getMockPhotos({
   return { photos: page, nextCursor };
 }
 
-function getMockAlbums(): Album[] {
+function getMockAlbums(): (Album & { covers: CoverPhoto[] })[] {
   const { photos, tags } = buildMockState();
 
   return tags
-    .map((tag): Album | null => {
+    .map((tag): (Album & { covers: CoverPhoto[] }) | null => {
       const taggedPhotos = photos.filter((photo) =>
         photo.tags.some((photoTag) => photoTag.id === tag.id),
       );
       if (taggedPhotos.length === 0) return null;
 
-      const cover = taggedPhotos[0];
+      const covers = taggedPhotos
+        .slice(0, 3)
+        .map((photo) => ({
+          id: photo.id,
+          thumbUrl: photo.thumbUrl,
+          blurDataUrl: photo.blurDataUrl,
+        }));
+
       return {
         tag,
         count: taggedPhotos.length,
-        cover: { id: cover.id, thumbUrl: cover.thumbUrl, blurDataUrl: cover.blurDataUrl },
+        cover: covers[0] ?? null,
+        covers,
       };
     })
-    .filter((album): album is Album => album !== null)
+    .filter((album): album is Album & { covers: CoverPhoto[] } => album !== null)
     .sort(
       (a, b) =>
         a.tag.category.localeCompare(b.tag.category) || a.tag.name.localeCompare(b.tag.name),
@@ -207,8 +215,9 @@ export function getMockColors(): ColorAlbum[] {
         album.tag.colorAccent != null,
     )
     .map((album) => ({
-      ...album,
       tag: album.tag as Tag & { colorBg: string; colorAccent: string },
+      count: album.count,
+      covers: album.covers,
     }))
     .sort((a, b) => a.tag.name.localeCompare(b.tag.name));
 }
