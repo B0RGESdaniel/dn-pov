@@ -137,10 +137,15 @@ export function ColorTransitionProvider({ children }: { children: ReactNode }) {
       const height = window.innerHeight;
 
       originRef.current = { x: cx, y: cy };
-      maxRadiusRef.current = Math.hypot(
+      const cornerDistance = Math.hypot(
         Math.max(cx, width - cx),
         Math.max(cy, height - cy),
       );
+      // Cada braço do blob pode ficar até BLOB_AMPLITUDE menor que o raio
+      // "perfeito" (ver bumpsRef abaixo) — sem essa margem, um braço curto
+      // apontando pro canto mais distante deixa um pedaço da tela
+      // descoberto (o "glitch" antes de trocar de página).
+      maxRadiusRef.current = cornerDistance / (1 - BLOB_AMPLITUDE);
       bumpsRef.current = Array.from(
         { length: BLOB_POINTS },
         () => 1 + (Math.random() * 2 - 1) * BLOB_AMPLITUDE,
