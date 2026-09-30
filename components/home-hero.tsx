@@ -30,7 +30,8 @@ const DESTINATIONS = [
     href: "/cor",
     label: "cor",
     Icon: Palette,
-    className: "bg-white text-black font-mono uppercase",
+    className:
+      "text-black font-display tracking-tight uppercase border-2 border-black shadow-[4px_4px_0_0_#000] !transition-all !duration-150 hover:!scale-100 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#000]",
   },
   {
     href: "/memorias",
@@ -42,6 +43,37 @@ const DESTINATIONS = [
 
 function photoAlt(photo: Photo): string {
   return photo.tags.map((tag) => tag.name).join(", ") || "Foto";
+}
+
+// Mesmo fundo de /cor (components/color-page-shell.tsx): cinza claro +
+// grid de linhas azuis, só que numa escala menor pra caber no botão.
+const CorGridBackground: CSSProperties = {
+  backgroundColor: "#e9e9e9",
+  backgroundImage:
+    "linear-gradient(to right, rgba(37, 99, 235, 0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(37, 99, 235, 0.3) 1px, transparent 1px)",
+  backgroundSize: "14px 14px",
+};
+
+// Letra a letra, cada uma com sua cor + text-shadow duro (sem blur), no
+// mesmo espírito neobrutalist dos quadrados de components/color-grid.tsx.
+const CorLetterColors = ["#eab308", "#2563eb", "#16a34a", "#dc2626", "#ec4899"];
+
+function CorLabel({ label }: { label: string }) {
+  return (
+    <span className="flex">
+      {label.split("").map((char, index) => (
+        <span
+          key={index}
+          style={{
+            color: CorLetterColors[index % CorLetterColors.length],
+            textShadow: "1.5px 1.5px 0 #000",
+          }}
+        >
+          {char}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 // Preserva a proporção real da foto (evita crop forçado do object-cover
@@ -88,10 +120,15 @@ export function HomeHero({ photos }: HomeHeroProps) {
             <Link
               key={destination.href}
               href={destination.href}
+              style={destination.href === "/cor" ? CorGridBackground : undefined}
               className={`flex w-64 items-center justify-center gap-2.5 px-8 py-4 text-sm tracking-widest transition-transform hover:scale-105 md:w-72 ${destination.className}`}
             >
               <destination.Icon className="h-5 w-5" strokeWidth={2} />
-              {destination.label}
+              {destination.href === "/cor" ? (
+                <CorLabel label={destination.label} />
+              ) : (
+                destination.label
+              )}
             </Link>
           ))}
         </nav>
