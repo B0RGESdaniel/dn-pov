@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PlaceAlbum } from "@/lib/db";
+import { useZoomTransition } from "@/components/zoom-transition";
 
 interface GlobeMapProps {
   places: PlaceAlbum[];
@@ -103,6 +104,7 @@ function polaroidRotate(placeId: number): number {
 }
 
 export function GlobeMap({ places }: GlobeMapProps) {
+  const { trigger: triggerZoomTransition } = useZoomTransition();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<ReturnType<typeof createGlobe> | null>(null);
@@ -120,9 +122,11 @@ export function GlobeMap({ places }: GlobeMapProps) {
   // elas devem convergir — mesmo esquema de easing do phi/theta, só que pra
   // cor, já que globe.update() troca a cor na hora (sem transição própria).
   const baseColorRef = useRef<[number, number, number]>(DEFAULT_BASE_COLOR);
-  const targetBaseColorRef = useRef<[number, number, number]>(DEFAULT_BASE_COLOR);
+  const targetBaseColorRef =
+    useRef<[number, number, number]>(DEFAULT_BASE_COLOR);
   const glowColorRef = useRef<[number, number, number]>(DEFAULT_GLOW_COLOR);
-  const targetGlowColorRef = useRef<[number, number, number]>(DEFAULT_GLOW_COLOR);
+  const targetGlowColorRef =
+    useRef<[number, number, number]>(DEFAULT_GLOW_COLOR);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -181,10 +185,12 @@ export function GlobeMap({ places }: GlobeMapProps) {
         }
       }
       baseColorRef.current = baseColorRef.current.map(
-        (channel, i) => channel + (targetBaseColorRef.current[i] - channel) * COLOR_EASING,
+        (channel, i) =>
+          channel + (targetBaseColorRef.current[i] - channel) * COLOR_EASING,
       ) as [number, number, number];
       glowColorRef.current = glowColorRef.current.map(
-        (channel, i) => channel + (targetGlowColorRef.current[i] - channel) * COLOR_EASING,
+        (channel, i) =>
+          channel + (targetGlowColorRef.current[i] - channel) * COLOR_EASING,
       ) as [number, number, number];
 
       globeRef.current?.update({
@@ -225,10 +231,12 @@ export function GlobeMap({ places }: GlobeMapProps) {
     const place = places.find((item) => item.tag.id === selectedId) ?? null;
     const root = document.documentElement;
 
-    if (place?.tag.colorBg) root.style.setProperty("--background", place.tag.colorBg);
+    if (place?.tag.colorBg)
+      root.style.setProperty("--background", place.tag.colorBg);
     else root.style.removeProperty("--background");
 
-    if (place?.tag.colorAccent) root.style.setProperty("--accent", place.tag.colorAccent);
+    if (place?.tag.colorAccent)
+      root.style.setProperty("--accent", place.tag.colorAccent);
     else root.style.removeProperty("--accent");
 
     targetBaseColorRef.current = place?.tag.colorBg
@@ -266,7 +274,9 @@ export function GlobeMap({ places }: GlobeMapProps) {
   // de onde tirar o índice atual.
   function focusPlaceByOffset(offset: number) {
     if (places.length === 0) return;
-    const currentIndex = places.findIndex((place) => place.tag.id === selectedId);
+    const currentIndex = places.findIndex(
+      (place) => place.tag.id === selectedId,
+    );
     const baseIndex = currentIndex === -1 ? 0 : currentIndex;
     const nextIndex = (baseIndex + offset + places.length) % places.length;
     focusPlace(places[nextIndex]);
@@ -304,7 +314,8 @@ export function GlobeMap({ places }: GlobeMapProps) {
     );
   }
 
-  const activePlace = places.find((place) => place.tag.id === selectedId) ?? null;
+  const activePlace =
+    places.find((place) => place.tag.id === selectedId) ?? null;
   const activeIndex = places.findIndex((place) => place.tag.id === selectedId);
   const baseIndex = activeIndex === -1 ? 0 : activeIndex;
 
@@ -336,7 +347,10 @@ export function GlobeMap({ places }: GlobeMapProps) {
         <div className="relative flex flex-1 flex-col overflow-hidden">
           <div className="shrink-0 pt-24 sm:pt-32">
             <div className="relative h-20 overflow-hidden sm:h-28 md:h-32">
-              <AnimatePresence custom={slideDirectionRef.current} initial={false}>
+              <AnimatePresence
+                custom={slideDirectionRef.current}
+                initial={false}
+              >
                 {trackSlots.map(({ offset, place }) => (
                   <motion.button
                     key={place.tag.id}
@@ -443,6 +457,20 @@ export function GlobeMap({ places }: GlobeMapProps) {
               <div className="absolute bottom-8 z-10 flex justify-center sm:bottom-12">
                 <Link
                   href={`/mapa/${encodeURIComponent(activePlace.tag.name)}`}
+                  onClick={(event) => {
+                    if (
+                      event.metaKey ||
+                      event.ctrlKey ||
+                      event.shiftKey ||
+                      event.altKey
+                    ) {
+                      return;
+                    }
+                    event.preventDefault();
+                    triggerZoomTransition(
+                      `/mapa/${encodeURIComponent(activePlace.tag.name)}`,
+                    );
+                  }}
                   className="rounded-full border border-accent bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:bg-accent hover:text-background"
                 >
                   Explorar
