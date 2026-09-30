@@ -8,13 +8,12 @@ export default async function CorPage() {
     <div
       className="min-h-screen"
       style={{
-        backgroundColor: "var(--background)",
+        backgroundColor: "#e9e9e9",
         backgroundImage: `
-          linear-gradient(to right, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px),
-          linear-gradient(to bottom, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px),
-          radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 60%)
+          linear-gradient(to right, rgba(37, 99, 235, 0.3) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(37, 99, 235, 0.3) 1px, transparent 1px)
         `,
-        backgroundSize: "40px 40px, 40px 40px, 100% 100%",
+        backgroundSize: "40px 40px",
       }}
     >
       <ColorGrid colors={colors} />
