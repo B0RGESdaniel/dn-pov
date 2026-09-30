@@ -150,6 +150,12 @@ export function SiteNav() {
   // — não é um tema por rota de verdade, só um toggle local.
   const neobrutalist = pathname === "/cor" || pathname.startsWith("/cor/");
 
+  // Com uma cor selecionada (/cor/<nome>), o item "cor" do nav mostra o nome
+  // dela em vez do label padrão.
+  const corName = pathname.startsWith("/cor/")
+    ? decodeURIComponent(pathname.slice("/cor/".length).split("/")[0])
+    : null;
+
   return (
     <nav className="absolute top-0 z-20 flex w-full items-center gap-2 px-4 py-3 sm:px-6">
       <Link
@@ -162,7 +168,7 @@ export function SiteNav() {
         <RollingNavLink
           key={item.href}
           href={item.href}
-          label={item.label}
+          label={item.href === "/cor" && corName ? corName : item.label}
           isActive={
             pathname === item.href || pathname.startsWith(`${item.href}/`)
           }
