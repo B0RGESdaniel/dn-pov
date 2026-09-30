@@ -79,10 +79,12 @@ function RollingNavLink({
   href,
   label,
   isActive,
+  neobrutalist,
 }: {
   href: string;
   label: string;
   isActive: boolean;
+  neobrutalist?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
   const hovered = useRef(false);
@@ -111,6 +113,10 @@ function RollingNavLink({
       }}
       className={`rounded-sm px-3 py-1.5 font-mono text-xs uppercase tracking-widest transition-colors duration-500 ${
         isActive ? "bg-accent text-background" : "text-accent hover:text-accent"
+      } ${
+        neobrutalist
+          ? "border-2 border-black !transition-all !duration-150 shadow-[3px_3px_0_0_#000] hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[1.5px_1.5px_0_0_#000]"
+          : ""
       }`}
     >
       <span className="relative block w-max overflow-hidden">
@@ -140,6 +146,9 @@ function RollingNavLink({
 
 export function SiteNav() {
   const pathname = usePathname();
+  // Efeito neobrutalism (borda + sombra dura) testado só em /cor, por enquanto
+  // — não é um tema por rota de verdade, só um toggle local.
+  const neobrutalist = pathname === "/cor" || pathname.startsWith("/cor/");
 
   return (
     <nav className="absolute top-0 z-20 flex w-full items-center gap-2 px-4 py-3 sm:px-6">
@@ -157,6 +166,7 @@ export function SiteNav() {
           isActive={
             pathname === item.href || pathname.startsWith(`${item.href}/`)
           }
+          neobrutalist={neobrutalist}
         />
       ))}
     </nav>
