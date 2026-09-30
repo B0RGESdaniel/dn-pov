@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { animate, motion, useMotionValue, useTransform } from "motion/react";
+import { animate, motion, useMotionValue } from "motion/react";
 import { Photo } from "@/types/photo";
 
 interface MemoryStackProps {
@@ -11,10 +11,12 @@ interface MemoryStackProps {
 
 const MAX_ROTATE = 10;
 const MIN_SPEED = 50;
+// Quanto a foto do topo aumenta ao ser "pega" (clicada) — feito pra parecer
+// que ela foi levantada da pilha, não só destacada por z-index.
+const PICKED_SCALE = 1.18;
 // A partir dessa profundidade na pilha, os cards param de ficar mais
 // apagados/menores — evita que, com poucas fotos, o(s) card(s) do fundo
-// fiquem com opacity/scale tão baixos que somem (e fiquem impossíveis de
-// clicar pra trazer de volta pra frente).
+// fiquem com opacity/scale tão baixos que somem.
 const MAX_VISIBLE_DEPTH = 4;
 
 function mix(from: number, to: number, ratio: number) {
@@ -36,7 +38,8 @@ interface MemoryCardProps {
   currentIndex: number;
   total: number;
   minDistance: number;
-  onBringToFront: (index: number) => void;
+  isPicked: boolean;
+  onTogglePick: () => void;
   onSwipeNext: () => void;
 }
 
@@ -46,21 +49,33 @@ function MemoryCard({
   currentIndex,
   total,
   minDistance,
-  onBringToFront,
+  isPicked,
+  onTogglePick,
   onSwipeNext,
 }: MemoryCardProps) {
   const isCurrent = index === currentIndex;
   const restRotate = mix(-MAX_ROTATE, MAX_ROTATE, Math.sin(index));
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [0, 400], [restRotate, restRotate + 10], {
-    clamp: false,
-  });
+  // O gesto de tap do motion roda num frame depois do drag terminar — às
+  // vezes ele também dispara logo após um arrasto (mesmo pointerdown/up),
+  // e nesse ponto o estado já pode ter avançado pra próxima foto, fazendo
+  // o "toque fantasma" pegar a foto errada. Guarda que houve arrasto e
+  // ignora o próximo tap.
+  const didDragRef = useRef(false);
 
   const offset = wrap(0, total, index - currentIndex);
   const zIndex = total - offset;
   const depthRatio = clamp(0, 1, offset / Math.min(MAX_VISIBLE_DEPTH, Math.max(total - 1, 1)));
   const opacity = mix(1, 0.5, depthRatio);
-  const scale = mix(1, 0.8, depthRatio);
+  const restScale = mix(1, 0.8, depthRatio);
+
+  const picked = isCurrent && isPicked;
+  const scale = picked ? PICKED_SCALE : restScale;
+  const rotate = picked ? 0 : restRotate;
+
+  function handleDragStart() {
+    didDragRef.current = true;
+  }
 
   function handleDragEnd() {
     const distance = Math.abs(x.get());
@@ -73,17 +88,25 @@ function MemoryCard({
     }
   }
 
+  function handleTap() {
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
+    }
+    onTogglePick();
+  }
+
   return (
     <motion.li
-      className="memory-card"
-      style={{ zIndex, x, rotate }}
-      initial={{ opacity: 0, scale: 0.3 }}
-      animate={{ opacity, scale }}
-      whileTap={isCurrent ? { scale: 0.98 } : {}}
+      className={`memory-card${picked ? " memory-card--picked" : ""}`}
+      style={{ zIndex, x, cursor: isCurrent ? "pointer" : "default" }}
+      initial={{ opacity: 0, scale: 0.3, rotate: restRotate }}
+      animate={{ opacity, scale, rotate }}
       transition={{ type: "spring", stiffness: 600, damping: 30 }}
       drag={isCurrent ? "x" : false}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      onTap={() => onBringToFront(index)}
+      onTap={isCurrent ? handleTap : undefined}
     >
       <div className="memory-card-thumb">
         <Image
@@ -103,6 +126,7 @@ function MemoryCard({
 
 export function MemoryStack({ photos }: MemoryStackProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPicked, setIsPicked] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const [minDistance, setMinDistance] = useState(120);
   const total = photos.length;
@@ -123,6 +147,12 @@ export function MemoryStack({ photos }: MemoryStackProps) {
     );
   }
 
+  function handleSwipeNext() {
+    setCurrentIndex((current) => wrap(0, total, current + 1));
+    // Trocar de foto sempre "solta" a que estava na mão.
+    setIsPicked(false);
+  }
+
   return (
     <div className="memory-stack-root" ref={rootRef}>
       <ul className="memory-stack">
@@ -134,10 +164,9 @@ export function MemoryStack({ photos }: MemoryStackProps) {
             currentIndex={currentIndex}
             total={total}
             minDistance={minDistance}
-            onBringToFront={setCurrentIndex}
-            onSwipeNext={() =>
-              setCurrentIndex(wrap(0, total, currentIndex + 1))
-            }
+            isPicked={isPicked}
+            onTogglePick={() => setIsPicked((picked) => !picked)}
+            onSwipeNext={handleSwipeNext}
           />
         ))}
       </ul>

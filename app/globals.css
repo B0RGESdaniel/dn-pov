@@ -118,8 +118,9 @@ body {
    posicionado absoluto e centralizado no container (top/left 50% + `translate`
    CSS, independente do `transform` que o motion/react usa pra x/rotate/scale
    animados); a ordem/rotação/escala de cada card vem de components/memory-stack.tsx
-   (mesma lógica do card stack de motion.dev, ver card-stack.md — clique traz
-   o card pra frente, arrastar o card do topo cicla a pilha). */
+   (mesma lógica do card stack de motion.dev, ver card-stack.md — arrastar a
+   foto do topo cicla a pilha; clicar na foto do topo "pega" ela, dando um
+   scale up, como se tirasse ela da pilha). */
 .memory-stack-root {
   position: relative;
   display: flex;
@@ -146,6 +147,13 @@ body {
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.45),
     0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 200ms ease;
+}
+
+.memory-card--picked {
+  box-shadow:
+    0 24px 50px rgba(0, 0, 0, 0.55),
+    0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 .memory-card-thumb {
