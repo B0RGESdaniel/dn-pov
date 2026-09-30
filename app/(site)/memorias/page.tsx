@@ -7,7 +7,7 @@ export default async function MemoriasPage() {
 
   return (
     <div
-      className="relative flex h-[100svh] items-center justify-center overflow-hidden px-4 pt-16 sm:pt-20"
+      className="relative flex h-[100svh] overflow-hidden px-4 pt-16 sm:pt-20"
       style={{ backgroundColor: "#ba8345" }}
     >
       {/* Nav mais claro (--foreground) pra ter contraste sobre o fundo
