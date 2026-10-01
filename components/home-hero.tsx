@@ -252,7 +252,7 @@ function usePointerPerspectiveShadow(maxOffset: number) {
 
 export function HomeHero() {
   const { ref: perspectiveRef, shadow: perspectiveShadow } =
-    usePointerPerspectiveShadow(10);
+    usePointerPerspectiveShadow(14);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
 
   return (
