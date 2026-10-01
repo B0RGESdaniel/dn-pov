@@ -4,6 +4,8 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 
+// Estilo exclusivo de cada botão — só aparece no hover (ver render abaixo).
+// Sem hover, todos os botões ficam num outline neutro e igual entre si.
 const DESTINATIONS = [
   {
     href: "/mural",
@@ -14,20 +16,17 @@ const DESTINATIONS = [
   {
     href: "/mapa",
     label: "MAPA",
-    className:
-      "relative overflow-hidden bg-[#4073d9] text-foreground text-3xl font-bold",
+    className: "bg-[#4073d9] text-foreground text-3xl font-bold",
   },
   {
     href: "/cor",
     label: "CORES",
-    className:
-      "text-black font-display text-5xl tracking-tight uppercase border-2 border-black",
+    className: "text-black font-display text-5xl tracking-tight uppercase",
   },
   {
     href: "/memorias",
     label: "MEMÓRIAS",
-    className:
-      "relative overflow-hidden text-foreground font-handwritten text-4xl normal-case",
+    className: "text-foreground font-handwritten text-4xl normal-case",
   },
 ] as const;
 
@@ -56,7 +55,7 @@ const BUTTON_BACKGROUNDS: Record<string, CSSProperties> = {
 // vermelho, verde, azul, amarelo, rosa.
 const CorLetterColors = ["#f87171", "#4ade80", "#60a5fa", "#fbbf24", "#FC9CCE"];
 
-function CorLabel({ label }: { label: string }) {
+function CorLabel({ label, active }: { label: string; active: boolean }) {
   return (
     <span className="flex">
       {label
@@ -66,8 +65,11 @@ function CorLabel({ label }: { label: string }) {
           <span
             key={index}
             style={{
-              color: CorLetterColors[index % CorLetterColors.length],
-              textShadow: "3px 3px 0 #000",
+              color: active
+                ? CorLetterColors[index % CorLetterColors.length]
+                : "currentColor",
+              textShadow: active ? "3px 3px 0 #000" : "0 0 0 transparent",
+              transition: "color 700ms ease-out, text-shadow 700ms ease-out",
             }}
           >
             {char}
@@ -134,6 +136,7 @@ function usePointerPerspectiveShadow(maxOffset: number) {
 export function HomeHero() {
   const { ref: perspectiveRef, shadow: perspectiveShadow } =
     usePointerPerspectiveShadow(14);
+  const [hoveredHref, setHoveredHref] = useState<string | null>(null);
 
   return (
     <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-background">
@@ -157,43 +160,77 @@ export function HomeHero() {
         </div>
 
         <nav className="flex flex-col items-center gap-3">
-          {DESTINATIONS.map((destination) => (
-            <Link
-              key={destination.href}
-              href={destination.href}
-              style={BUTTON_BACKGROUNDS[destination.href]}
-              className={`flex h-16 w-64 items-center justify-center px-8 text-2xl tracking-widest transition-transform hover:scale-105 md:w-72 ${destination.className}`}
-            >
-              {destination.href === "/memorias" && (
-                <span
-                  aria-hidden
-                  className="noise-texture pointer-events-none absolute inset-0 mix-blend-overlay opacity-70"
-                />
-              )}
-              {destination.href === "/mapa" && (
-                <img
-                  src="/earth.svg"
-                  alt=""
-                  aria-hidden="true"
-                  className="pointer-events-none absolute bottom-0 left-1/2 w-40 -translate-x-1/2 translate-y-[65%]"
-                />
-              )}
-              <span
-                className="relative z-10"
-                style={
-                  destination.href === "/mapa"
-                    ? { textShadow: "2px 2px 0 rgba(0, 0, 0, 0.35)" }
-                    : undefined
+          {DESTINATIONS.map((destination) => {
+            const isActive = hoveredHref === destination.href;
+
+            return (
+              <Link
+                key={destination.href}
+                href={destination.href}
+                onMouseEnter={() => setHoveredHref(destination.href)}
+                onMouseLeave={() =>
+                  setHoveredHref((current) =>
+                    current === destination.href ? null : current,
+                  )
                 }
+                onTouchStart={() => setHoveredHref(destination.href)}
+                onTouchEnd={() =>
+                  setHoveredHref((current) =>
+                    current === destination.href ? null : current,
+                  )
+                }
+                onTouchCancel={() =>
+                  setHoveredHref((current) =>
+                    current === destination.href ? null : current,
+                  )
+                }
+                style={isActive ? BUTTON_BACKGROUNDS[destination.href] : undefined}
+                className={`relative flex h-16 w-64 items-center justify-center overflow-hidden px-8 text-2xl tracking-widest transition-all duration-700 ease-out md:w-72 ${
+                  isActive
+                    ? destination.className
+                    : "bg-transparent text-foreground"
+                }`}
               >
-                {destination.href === "/cor" ? (
-                  <CorLabel label={destination.label} />
-                ) : (
-                  destination.label
+                {destination.href === "/memorias" && (
+                  <span
+                    aria-hidden
+                    className={`noise-texture pointer-events-none absolute inset-0 mix-blend-overlay transition-opacity duration-700 ease-out ${
+                      isActive ? "opacity-70" : "opacity-0"
+                    }`}
+                  />
                 )}
-              </span>
-            </Link>
-          ))}
+                {destination.href === "/mapa" && (
+                  <img
+                    src="/earth.svg"
+                    alt=""
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute bottom-0 left-1/2 w-40 -translate-x-1/2 translate-y-[65%] transition-opacity duration-700 ease-out ${
+                      isActive ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                )}
+                <span
+                  className="relative z-10"
+                  style={
+                    destination.href === "/mapa"
+                      ? {
+                          textShadow: isActive
+                            ? "2px 2px 0 rgba(0, 0, 0, 0.35)"
+                            : "0 0 0 transparent",
+                          transition: "text-shadow 700ms ease-out",
+                        }
+                      : undefined
+                  }
+                >
+                  {destination.href === "/cor" ? (
+                    <CorLabel label={destination.label} active={isActive} />
+                  ) : (
+                    destination.label
+                  )}
+                </span>
+              </Link>
+            );
+          })}
         </nav>
       </motion.div>
     </div>
