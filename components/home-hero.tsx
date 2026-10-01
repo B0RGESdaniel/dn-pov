@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, useEffect } from "react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, stagger, useAnimate } from "motion/react";
 
@@ -96,8 +96,64 @@ function aspectStyle(photo?: Photo): CSSProperties | undefined {
   return { aspectRatio: `${photo.width} / ${photo.height}` };
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+// Sombra estilo stencil (relevo deslocado) que muda de projeção conforme o
+// mouse se move pela tela — como se a luz viesse da posição do cursor e a
+// sombra do texto fosse empurrada pro lado oposto. Várias camadas do mesmo
+// deslocamento (em frações crescentes) simulam a extrusão/profundidade, em
+// vez de um único offset chapado.
+const PERSPECTIVE_SHADOW_COLOR = "#e4dcc8";
+const PERSPECTIVE_LAYERS = 6;
+
+function usePointerPerspectiveShadow(maxOffset: number) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [shadow, setShadow] = useState(
+    `${maxOffset}px ${maxOffset}px 0 ${PERSPECTIVE_SHADOW_COLOR}`,
+  );
+
+  useEffect(() => {
+    function handlePointerMove(event: PointerEvent) {
+      const el = ref.current;
+      if (!el) return;
+
+      const rect = el.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      // Sombra projetada pro lado oposto do cursor (luz "vem" do mouse).
+      const dx = clamp(
+        ((centerX - event.clientX) / (window.innerWidth / 2)) * maxOffset,
+        -maxOffset,
+        maxOffset,
+      );
+      const dy = clamp(
+        ((centerY - event.clientY) / (window.innerHeight / 2)) * maxOffset,
+        -maxOffset,
+        maxOffset,
+      );
+
+      const layers = Array.from({ length: PERSPECTIVE_LAYERS }, (_, i) => {
+        const t = (i + 1) / PERSPECTIVE_LAYERS;
+        return `${dx * t}px ${dy * t}px 0 ${PERSPECTIVE_SHADOW_COLOR}`;
+      }).join(", ");
+
+      setShadow(layers);
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    return () => window.removeEventListener("pointermove", handlePointerMove);
+  }, [maxOffset]);
+
+  return { ref, shadow };
+}
+
 export function HomeHero({ photos }: HomeHeroProps) {
   const [scope, animate] = useAnimate();
+  const { ref: perspectiveRef, shadow: perspectiveShadow } =
+    usePointerPerspectiveShadow(14);
 
   useEffect(() => {
     animate(
@@ -118,12 +174,16 @@ export function HomeHero({ photos }: HomeHeroProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.88, delay: 1.5 }}
       >
-        <div className="space-y-4">
-          <p className="font-display text-5xl text-foreground md:text-7xl">
-            dn-pov.
+        <div className="space-y-1">
+          <p className="font-display text-2xl text-foreground md:text-4xl">
+            It&apos;s all about
           </p>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
-            acervo pessoal
+          <p
+            ref={perspectiveRef}
+            className="font-display text-5xl uppercase tracking-[0.08em] text-background md:text-7xl"
+            style={{ textShadow: perspectiveShadow }}
+          >
+            perspective
           </p>
         </div>
 
