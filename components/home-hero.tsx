@@ -2,6 +2,7 @@
 
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import { motion } from "motion/react";
 
 const DESTINATIONS = [
@@ -313,6 +314,14 @@ export function HomeHero() {
           ))}
         </nav>
       </motion.div>
+
+      <Link
+        href="/admin"
+        aria-label="Admin"
+        className="absolute bottom-4 right-4 z-50 text-foreground/30 transition-colors hover:text-foreground/80 focus-visible:text-foreground/80"
+      >
+        <Lock className="h-6 w-6" />
+      </Link>
     </div>
   );
 }
