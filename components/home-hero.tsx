@@ -86,7 +86,7 @@ function clamp(value: number, min: number, max: number) {
 // sombra do texto fosse empurrada pro lado oposto. Várias camadas do mesmo
 // deslocamento (em frações crescentes) simulam a extrusão/profundidade, em
 // vez de um único offset chapado.
-const PERSPECTIVE_SHADOW_COLOR = "#e4dcc8";
+const PERSPECTIVE_SHADOW_COLOR = "#0022FF";
 const PERSPECTIVE_LAYERS = 6;
 
 function usePointerPerspectiveShadow(maxOffset: number) {
@@ -138,18 +138,18 @@ export function HomeHero() {
   return (
     <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-background">
       <motion.div
-        className="z-50 flex flex-col items-center space-y-5 text-center"
+        className="z-50 flex flex-col items-center space-y-10 text-center"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.88, delay: 1.5 }}
       >
-        <div className="space-y-1">
+        <div className="space-y-10">
           <p className="font-display text-2xl text-foreground md:text-4xl">
             It&apos;s all about
           </p>
           <p
             ref={perspectiveRef}
-            className="font-display text-5xl uppercase tracking-[0.08em] text-background md:text-7xl"
+            className="font-display text-5xl uppercase tracking-[0.08em] text-foreground md:text-7xl"
             style={{ textShadow: perspectiveShadow }}
           >
             perspective
