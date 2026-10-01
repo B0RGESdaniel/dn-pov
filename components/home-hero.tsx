@@ -91,11 +91,35 @@ function clamp(value: number, min: number, max: number) {
 const PERSPECTIVE_SHADOW_COLOR = "#0022FF";
 const PERSPECTIVE_LAYERS = 6;
 
+function buildPerspectiveShadow(dx: number, dy: number) {
+  return Array.from({ length: PERSPECTIVE_LAYERS }, (_, i) => {
+    const t = (i + 1) / PERSPECTIVE_LAYERS;
+    return `${dx * t}px ${dy * t}px 0 ${PERSPECTIVE_SHADOW_COLOR}`;
+  }).join(", ");
+}
+
+// API não padronizada do iOS 13+: DeviceMotionEvent só entrega dados
+// depois de uma permissão pedida a partir de um gesto do usuário.
+interface DeviceMotionEventWithPermission {
+  requestPermission?: () => Promise<"granted" | "denied">;
+}
+
+// accelerationIncludingGravity.x/.y é a projeção do vetor gravidade nos
+// eixos do aparelho — varia de forma contínua conforme ele gira, sem o
+// "salto" que os ângulos de Euler do deviceorientation (alpha/beta/gamma)
+// têm perto de certas inclinações (gamma troca de sinal de repente — é
+// esse salto que causava o glitch). Por isso usamos o acelerômetro
+// (devicemotion) em vez do giroscópio orientado (deviceorientation) pra
+// essa sombra: ~6.5 m/s² já é "bem inclinado pro lado" na prática.
+const GRAVITY_RANGE = 3.5;
+const PERSPECTIVE_SMOOTHING = 0.15;
+
 function usePointerPerspectiveShadow(maxOffset: number) {
   const ref = useRef<HTMLParagraphElement>(null);
   const [shadow, setShadow] = useState(
     `${maxOffset}px ${maxOffset}px 0 ${PERSPECTIVE_SHADOW_COLOR}`,
   );
+  const smoothedRef = useRef({ dx: maxOffset, dy: maxOffset });
 
   useEffect(() => {
     function handlePointerMove(event: PointerEvent) {
@@ -118,16 +142,74 @@ function usePointerPerspectiveShadow(maxOffset: number) {
         maxOffset,
       );
 
-      const layers = Array.from({ length: PERSPECTIVE_LAYERS }, (_, i) => {
-        const t = (i + 1) / PERSPECTIVE_LAYERS;
-        return `${dx * t}px ${dy * t}px 0 ${PERSPECTIVE_SHADOW_COLOR}`;
-      }).join(", ");
+      setShadow(buildPerspectiveShadow(dx, dy));
+    }
 
-      setShadow(layers);
+    // Sem mouse (celular), o equivalente é inclinar o aparelho: a
+    // componente x/y da gravidade nos eixos do aparelho faz o mesmo papel
+    // que a posição do cursor faz no desktop.
+    function handleDeviceMotion(event: DeviceMotionEvent) {
+      const gravity = event.accelerationIncludingGravity;
+      if (!gravity) return;
+
+      const x = gravity.x ?? 0;
+      const y = gravity.y ?? 0;
+
+      const targetDx = clamp((x / GRAVITY_RANGE) * maxOffset, -maxOffset, maxOffset);
+      const targetDy = clamp((-y / GRAVITY_RANGE) * maxOffset, -maxOffset, maxOffset);
+
+      const smoothed = smoothedRef.current;
+      smoothed.dx += (targetDx - smoothed.dx) * PERSPECTIVE_SMOOTHING;
+      smoothed.dy += (targetDy - smoothed.dy) * PERSPECTIVE_SMOOTHING;
+
+      setShadow(buildPerspectiveShadow(smoothed.dx, smoothed.dy));
     }
 
     window.addEventListener("pointermove", handlePointerMove);
-    return () => window.removeEventListener("pointermove", handlePointerMove);
+
+    let motionEnabled = false;
+    function enableDeviceMotion() {
+      if (motionEnabled) return;
+      motionEnabled = true;
+      window.addEventListener("devicemotion", handleDeviceMotion);
+    }
+
+    const DeviceMotionEventWithPermission =
+      typeof window !== "undefined"
+        ? (window.DeviceMotionEvent as unknown as DeviceMotionEventWithPermission)
+        : undefined;
+
+    const hasRequestPermission =
+      typeof DeviceMotionEventWithPermission?.requestPermission === "function";
+
+    // Só o iOS 13+ exige permissão explícita (e só pode ser pedida a partir
+    // de um gesto do usuário). Em todo o resto (Android, desktop) o evento
+    // já funciona direto — não faz sentido esperar um clique pra ligar.
+    if (!hasRequestPermission) {
+      enableDeviceMotion();
+    }
+
+    // No iOS, aproveitamos o primeiro clique na página pra pedir a
+    // permissão — o Safari exige que requestPermission() seja chamado
+    // dentro de um gesto do tipo "click" (touchstart não conta, dá
+    // NotAllowedError mesmo acontecendo dentro do toque).
+    function handleFirstClick() {
+      DeviceMotionEventWithPermission?.requestPermission?.()
+        .then((result) => {
+          if (result === "granted") enableDeviceMotion();
+        })
+        .catch(() => {});
+
+      window.removeEventListener("click", handleFirstClick);
+    }
+
+    window.addEventListener("click", handleFirstClick, { once: true });
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("devicemotion", handleDeviceMotion);
+      window.removeEventListener("click", handleFirstClick);
+    };
   }, [maxOffset]);
 
   return { ref, shadow };
