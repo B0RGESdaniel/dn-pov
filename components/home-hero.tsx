@@ -229,7 +229,7 @@ export function HomeHero() {
         transition={{ duration: 0.88, delay: 1.5 }}
       >
         <div className="space-y-10">
-          <p className="font-display text-2xl text-foreground md:text-4xl">
+          <p className="font-fraunces font-semibold text-2xl text-foreground md:text-4xl">
             It&apos;s all about
           </p>
           <p
