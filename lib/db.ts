@@ -304,7 +304,7 @@ function rowToPhoto(row: Record<string, unknown>): Photo {
   };
 }
 
-async function attachTags(photos: Photo[]): Promise<Photo[]> {
+export async function attachTags(photos: Photo[]): Promise<Photo[]> {
   if (photos.length === 0) return photos;
 
   const photoIds = photos.map((photo) => photo.id);
@@ -326,6 +326,55 @@ async function attachTags(photos: Photo[]): Promise<Photo[]> {
       .filter((row) => row.photo_id === photo.id)
       .map((row) => rowToTag(row as unknown as Record<string, unknown>)),
   }));
+}
+
+export async function getPhotoById(id: number): Promise<Photo | null> {
+  const result = await db.execute({
+    sql: `SELECT photos.* FROM photos WHERE id = ?`,
+    args: [id],
+  });
+
+  if (result.rows.length === 0) return null;
+
+  const [photo] = await attachTags([
+    rowToPhoto(result.rows[0] as unknown as Record<string, unknown>),
+  ]);
+
+  return photo;
+}
+
+export interface UpdatePhotoMetaInput {
+  memory: string | null;
+  edited: boolean;
+}
+
+export async function updatePhotoMeta(
+  id: number,
+  { memory, edited }: UpdatePhotoMetaInput,
+): Promise<void> {
+  await db.execute({
+    sql: `UPDATE photos SET memory = ?, edited = ? WHERE id = ?`,
+    args: [memory, edited ? 1 : 0, id],
+  });
+}
+
+export async function setPhotoTags(
+  photoId: number,
+  tagIds: number[],
+): Promise<void> {
+  await db.execute({
+    sql: `DELETE FROM photo_tags WHERE photo_id = ?`,
+    args: [photoId],
+  });
+
+  await linkPhotoTags({ photoId, tagIds });
+}
+
+export async function deletePhoto(id: number): Promise<void> {
+  await db.batch([
+    { sql: `DELETE FROM photo_tags WHERE photo_id = ?`, args: [id] },
+    { sql: `DELETE FROM photos WHERE id = ?`, args: [id] },
+  ]);
 }
 
 export async function getMemories(): Promise<Photo[]> {

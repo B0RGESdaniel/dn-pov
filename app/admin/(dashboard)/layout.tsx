@@ -2,8 +2,10 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { logout } from "../actions";
 
-// Link de "Fotos" entra aqui na próxima etapa.
-const NAV_ITEMS = [{ href: "/admin/tags", label: "Tags" }];
+const NAV_ITEMS = [
+  { href: "/admin/tags", label: "Tags" },
+  { href: "/admin/fotos", label: "Fotos" },
+];
 
 export default function AdminDashboardLayout({
   children,
