@@ -279,7 +279,7 @@ export function HomeHero() {
               key={destination.href}
               href={destination.href}
               style={BUTTON_BACKGROUNDS[destination.href]}
-              className={`flex h-16 w-64 items-center justify-center px-8 text-2xl tracking-widest transition-transform hover:scale-105 md:w-72 ${destination.className}`}
+              className={`home-destination flex h-16 w-64 items-center justify-center px-8 text-2xl tracking-widest md:w-72 ${destination.className}`}
             >
               {destination.href === "/memorias" && (
                 <span
