@@ -207,6 +207,59 @@ export async function getTags(): Promise<Tag[]> {
   );
 }
 
+export interface TagWithUsage extends Tag {
+  photoCount: number;
+}
+
+export async function getTagsWithUsage(): Promise<TagWithUsage[]> {
+  const result = await db.execute(`
+    SELECT t.id, t.name, t.category, t.lat, t.lon, t.color_bg, t.color_accent,
+           COUNT(pt.photo_id) as photo_count
+    FROM tags t
+    LEFT JOIN photo_tags pt ON pt.tag_id = t.id
+    GROUP BY t.id
+    ORDER BY t.category, t.name
+  `);
+
+  return result.rows.map((row) => ({
+    ...rowToTag(row as unknown as Record<string, unknown>),
+    photoCount: Number(row.photo_count),
+  }));
+}
+
+export interface UpdateTagInput {
+  id: number;
+  name: string;
+  lat?: number | null;
+  lon?: number | null;
+  colorBg?: string | null;
+  colorAccent?: string | null;
+}
+
+export async function updateTagById(input: UpdateTagInput): Promise<void> {
+  await db.execute({
+    sql: `
+      UPDATE tags SET name = ?, lat = ?, lon = ?, color_bg = ?, color_accent = ?
+      WHERE id = ?
+    `,
+    args: [
+      input.name,
+      input.lat ?? null,
+      input.lon ?? null,
+      input.colorBg ?? null,
+      input.colorAccent ?? null,
+      input.id,
+    ],
+  });
+}
+
+export async function deleteTag(id: number): Promise<void> {
+  await db.batch([
+    { sql: `DELETE FROM photo_tags WHERE tag_id = ?`, args: [id] },
+    { sql: `DELETE FROM tags WHERE id = ?`, args: [id] },
+  ]);
+}
+
 export async function insertPhoto(data: NewPhoto): Promise<number> {
   const result = await db.execute({
     sql: `
