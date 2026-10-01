@@ -139,7 +139,7 @@ body {
 }
 
 .memory-card {
-  width: clamp(150px, 34vw, 230px);
+  width: clamp(190px, 50vw, 280px);
   background: #fff;
   padding: 10px 10px 0;
   box-shadow:
@@ -166,14 +166,14 @@ body {
 .memory-card-caption {
   padding: 8px 6px 18px;
   text-align: center;
-  font-size: 1.25rem;
+  font-size: 1rem;
   line-height: 1.2;
   color: #222;
 }
 
 @media (min-width: 768px) {
   .memory-card-caption {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
   }
 }
 
