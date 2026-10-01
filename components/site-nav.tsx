@@ -129,7 +129,7 @@ function RollingNavLink({
         focused.current = false;
         requestActive(hovered.current);
       }}
-      className={`rounded-sm px-3 py-1.5 uppercase tracking-widest transition-colors duration-500 ${
+      className={`rounded-sm px-2.5 py-1 uppercase tracking-wider transition-colors duration-500 sm:px-3 sm:py-1.5 sm:tracking-widest ${
         isActive ? "bg-accent text-background" : "text-accent hover:text-accent"
       } ${
         neobrutalist && isActive
@@ -190,13 +190,13 @@ export function SiteNav() {
     : null;
 
   return (
-    <nav className="absolute top-0 z-20 flex w-full items-center gap-2 px-4 py-3 sm:px-6">
+    <nav className="absolute top-0 z-20 flex w-full items-center gap-1 px-3 py-3 sm:gap-2 sm:px-6">
       <Link
         href="/"
-        className="mr-4 text-accent transition-colors duration-500"
+        className="mr-3 shrink-0 text-accent transition-colors duration-500 sm:mr-4"
         aria-label="Início"
       >
-        <Eye className="h-7 w-7" />
+        <Eye className="h-6 w-6 sm:h-7 sm:w-7" />
       </Link>
       {NAV_ITEMS.map((item) => (
         <RollingNavLink
