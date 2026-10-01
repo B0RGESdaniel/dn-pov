@@ -12,7 +12,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/admin/login", request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  // Reforço pra bfcache/caches intermediários: página autenticada não deve
+  // ficar guardada em lugar nenhum fora da sessão do navegador.
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }
 
 export const config = {

@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import Link from "next/link";
+import { BfcacheGuard } from "@/components/admin/bfcache-guard";
 import { logout } from "../actions";
 
 const NAV_ITEMS = [
@@ -14,6 +15,7 @@ export default function AdminDashboardLayout({
 }) {
   return (
     <div>
+      <BfcacheGuard />
       <nav className="flex items-center justify-between border-b border-border px-6 py-4">
         <div className="flex items-center gap-4">
           <span className="font-display text-sm text-foreground">Admin</span>
