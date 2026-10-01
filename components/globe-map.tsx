@@ -1,6 +1,7 @@
 "use client";
 
 import createGlobe, { COBEOptions } from "cobe";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
@@ -414,7 +415,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
               aria-label="Local anterior"
               className="absolute left-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-accent/30 text-accent transition-colors duration-500 hover:border-accent sm:left-6 sm:h-11 sm:w-11"
             >
-              ←
+              <ChevronLeft className="h-5 w-5" />
             </button>
 
             <div ref={wrapperRef} className="relative touch-none">
@@ -481,7 +482,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
               aria-label="Próximo local"
               className="absolute right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-accent/30 text-accent transition-colors duration-500 hover:border-accent sm:right-6 sm:h-11 sm:w-11"
             >
-              →
+              <ChevronRight className="h-5 w-5" />
             </button>
 
             {activePlace && (
