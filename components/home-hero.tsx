@@ -255,7 +255,7 @@ export function HomeHero() {
   return (
     <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-background">
       <motion.div
-        className="z-50 flex flex-col items-center space-y-10 text-center"
+        className="z-50 flex flex-col items-center space-y-16 text-center"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
