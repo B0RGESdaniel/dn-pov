@@ -1,7 +1,7 @@
 // Tipos de domínio para fotos e tags, refletindo o schema definido em CLAUDE.md
 // (tabelas `photos`, `tags`, `photo_tags`).
 
-export type TagCategory = "place" | "subject" | "color";
+export type TagCategory = "place" | "color";
 
 export type Photo = {
   id: number;
@@ -36,6 +36,5 @@ export type PhotosPage = {
 
 export type PhotoFilters = {
   place?: string[];
-  subject?: string[];
   color?: string[];
 };

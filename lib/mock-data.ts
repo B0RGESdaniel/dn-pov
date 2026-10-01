@@ -20,7 +20,6 @@ interface MockManifestEntry {
     colorBg?: string;
     colorAccent?: string;
   };
-  subjects: string[];
   colors: (string | { name: string; colorBg?: string; colorAccent?: string })[];
   edited: boolean;
   memory?: string;
@@ -72,7 +71,6 @@ function buildMockState(): { photos: Photo[]; tags: Tag[] } {
         entry.place.colorBg ?? null,
         entry.place.colorAccent ?? null,
       ),
-      ...entry.subjects.map((name) => getOrCreateTag(name, "subject")),
       ...entry.colors.map((color) =>
         typeof color === "string"
           ? getOrCreateTag(color, "color")
@@ -113,7 +111,6 @@ export function getMockTags(): Tag[] {
 
 interface GetMockPhotosProps {
   place?: string[];
-  subject?: string[];
   color?: string[];
   cursor?: string;
   limit?: number;
@@ -121,7 +118,6 @@ interface GetMockPhotosProps {
 
 export function getMockPhotos({
   place,
-  subject,
   color,
   cursor,
   limit = 20,
@@ -134,7 +130,7 @@ export function getMockPhotos({
         ? true
         : photo.tags.some((tag) => tag.category === category && names.includes(tag.name));
 
-    return check(place, "place") && check(subject, "subject") && check(color, "color");
+    return check(place, "place") && check(color, "color");
   });
 
   // Mesma ordem/cursor de lib/db.ts::getPhotos: mais recentes primeiro,

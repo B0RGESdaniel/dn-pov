@@ -18,7 +18,6 @@ interface LinkPhotoTagsProps {
 
 interface GetPhotosProps {
   place?: string[];
-  subject?: string[];
   color?: string[];
   cursor?: string;
   limit?: number;
@@ -363,7 +362,6 @@ function categoryFilterClause(
 
 export async function getPhotos({
   place,
-  subject,
   color,
   cursor,
   limit = 20,
@@ -381,7 +379,6 @@ export async function getPhotos({
 
   const categoryFilters: [TagCategory, string[] | undefined][] = [
     ["place", place],
-    ["subject", subject],
     ["color", color],
   ];
 

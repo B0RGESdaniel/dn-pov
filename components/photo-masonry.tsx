@@ -54,7 +54,6 @@ export function PhotoMasonry({
 
     const params = new URLSearchParams();
     if (filters?.place?.length) params.set("place", filters.place.join(","));
-    if (filters?.subject?.length) params.set("subject", filters.subject.join(","));
     if (filters?.color?.length) params.set("color", filters.color.join(","));
     params.set("cursor", cursor);
 

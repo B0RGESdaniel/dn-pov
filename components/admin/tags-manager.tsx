@@ -11,11 +11,10 @@ import {
 
 const CATEGORY_LABELS: Record<TagCategory, string> = {
   place: "Local",
-  subject: "Assunto",
   color: "Cor",
 };
 
-const CATEGORIES: TagCategory[] = ["place", "subject", "color"];
+const CATEGORIES: TagCategory[] = ["place", "color"];
 
 export function TagsManager({ tags }: { tags: TagWithUsage[] }) {
   return (
@@ -91,7 +90,7 @@ function TagCategorySection({
               className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 py-2"
             >
               <div className="flex items-center gap-3">
-                {category !== "subject" && tag.colorBg && (
+                {tag.colorBg && (
                   <span
                     className="h-4 w-4 shrink-0 rounded-full border border-border"
                     style={{ backgroundColor: tag.colorBg }}
@@ -134,16 +133,8 @@ function TagCategorySection({
             <Field label="Lon" name="lon" type="number" step="any" />
           </>
         )}
-        {(category === "place" || category === "color") && (
-          <>
-            <Field label="Cor fundo" name="colorBg" placeholder="#rrggbb" />
-            <Field
-              label="Cor accent"
-              name="colorAccent"
-              placeholder="#rrggbb"
-            />
-          </>
-        )}
+        <Field label="Cor fundo" name="colorBg" placeholder="#rrggbb" />
+        <Field label="Cor accent" name="colorAccent" placeholder="#rrggbb" />
         <button
           type="submit"
           disabled={isPending}
@@ -205,22 +196,18 @@ function TagEditRow({
             />
           </>
         )}
-        {(category === "place" || category === "color") && (
-          <>
-            <Field
-              label="Cor fundo"
-              name="colorBg"
-              placeholder="#rrggbb"
-              defaultValue={tag.colorBg ?? ""}
-            />
-            <Field
-              label="Cor accent"
-              name="colorAccent"
-              placeholder="#rrggbb"
-              defaultValue={tag.colorAccent ?? ""}
-            />
-          </>
-        )}
+        <Field
+          label="Cor fundo"
+          name="colorBg"
+          placeholder="#rrggbb"
+          defaultValue={tag.colorBg ?? ""}
+        />
+        <Field
+          label="Cor accent"
+          name="colorAccent"
+          placeholder="#rrggbb"
+          defaultValue={tag.colorAccent ?? ""}
+        />
         <button
           type="submit"
           disabled={isPending}

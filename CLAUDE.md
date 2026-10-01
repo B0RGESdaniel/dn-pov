@@ -40,10 +40,10 @@ CREATE TABLE photos (
 CREATE TABLE tags (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('place', 'subject', 'color')),
+  category TEXT NOT NULL CHECK (category IN ('place', 'color')),
   lat REAL,           -- só usado quando category = 'place'
   lon REAL,
-  color_bg TEXT,       -- só usado quando category = 'place' (tema dinâmico da tela de Mapa)
+  color_bg TEXT,       -- tema dinâmico: local (tela de Mapa) ou cor (tela de Cor)
   color_accent TEXT,
   UNIQUE (name, category)
 );
@@ -55,19 +55,18 @@ CREATE TABLE photo_tags (
 );
 ```
 
-Tags são livres dentro de cada categoria (sem lista fixa de assuntos/cores no código) — a única regra é a categoria (`place` | `subject` | `color`), validada por `CHECK` no schema.
+Tags são livres dentro de cada categoria (sem lista fixa de locais/cores no código) — a única regra é a categoria (`place` | `color`), validada por `CHECK` no schema.
 
 ## Fluxo de upload (CLI, roda fora da aplicação)
 
 ```
-node scripts/upload.ts ./fotos --place rio-de-janeiro --lat -22.9 --lon -43.2 --subjects arquitetura,paisagem --color azul --edited
+node scripts/upload.ts ./fotos --place rio-de-janeiro --lat -22.9 --lon -43.2 --color azul --edited
 ```
 
 Flags, todas opcionais e manuais (sem geocoding/detecção automática):
 
 - `--place <nome>` — cria/atualiza uma tag de local; combine com `--lat`/`--lon` pra popular coordenadas (usadas na tela de Mapa)
 - `--color-bg <hex>` / `--color-accent <hex>` — as 2 cores do local (fundo + accent), usadas no tema dinâmico da tela de Mapa; só fazem sentido junto com `--place`
-- `--subjects <a,b,c>` — tags de assunto (lista livre)
 - `--color <nome>` — tag de cor (lista livre)
 - `--edited` — marca as fotos do lote como editadas (padrão: original)
 - `--memory "texto"` — preenche a coluna `memory`; foto entra na tela de Memórias (`/memorias`)
@@ -81,14 +80,14 @@ Nunca mexe no código do site nem exige redeploy. Não existe upload via web —
 
 ## API interna (`app/api/photos/route.ts`)
 
-- `GET /api/photos?place=rio&subject=arquitetura,paisagem&color=azul&cursor=...` — retorna página de fotos filtradas por tag, paginação cursor-based (não offset), com cache na edge (`Cache-Control` público)
-- Cada categoria (`place`/`subject`/`color`) é um parâmetro próprio: múltiplos valores na mesma categoria se combinam por **OR**; categorias diferentes se combinam por **AND**
+- `GET /api/photos?place=rio&color=azul&cursor=...` — retorna página de fotos filtradas por tag, paginação cursor-based (não offset), com cache na edge (`Cache-Control` público)
+- Cada categoria (`place`/`color`) é um parâmetro próprio: múltiplos valores na mesma categoria se combinam por **OR**; categorias diferentes se combinam por **AND**
 - Filtro por tag é feito via `EXISTS` no SQL (`lib/db.ts`), não em memória
 
 ## Front-end
 
 - `/` — grid responsivo (`grid-cols-2 md:grid-cols-3 lg:grid-cols-4`), infinite scroll consumindo a API paginada, chips de filtro agrupados por categoria refletidos na URL (compartilhável)
-- `/albuns` — cards agrupados por local/assunto/cor (contagem + capa reais via SQL), com abas Todos/Local/Assunto/Cor; cada card linka pro `/` já filtrado
+- `/albuns` — cards agrupados por local/cor (contagem + capa reais via SQL), com abas Todos/Local/Cor; cada card linka pro `/` já filtrado
 - `next/image` com `placeholder="blur"` usando o `blur_data_url` do banco
 - Lightbox própria (`components/lightbox.tsx`) ao clicar na foto — modal com navegação por seta/teclado (sem lib externa, sem transição de elemento compartilhado)
 - Nav global fixa (`components/site-nav.tsx`) com destaque da rota ativa

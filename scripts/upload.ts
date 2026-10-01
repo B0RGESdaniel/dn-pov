@@ -23,7 +23,6 @@ const lat = getFlag("--lat");
 const lon = getFlag("--lon");
 const colorBg = getFlag("--color-bg");
 const colorAccent = getFlag("--color-accent");
-const subjects = getListFlag("--subjects");
 const colors = getListFlag("--color");
 const edited = args.includes("--edited");
 const memory = getFlag("--memory") ?? null;
@@ -41,7 +40,6 @@ const tagInputs: NewTagInput[] = [
         },
       ]
     : []),
-  ...subjects.map((name) => ({ name, category: "subject" as const })),
   ...colors.map((name) => ({ name, category: "color" as const })),
 ];
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPhotos } from "@/lib/photos-source";
 
-// GET /api/photos?place=rio&subject=arquitetura,paisagem&color=azul&cursor=...
+// GET /api/photos?place=rio&color=azul&cursor=...
 // Cada categoria filtra por OR entre si; categorias diferentes se combinam por AND.
 // Paginação cursor-based (não offset). Filtro via JOIN/EXISTS no SQL (lib/db.ts), não em memória.
 function parseList(value: string | null): string[] | undefined {
@@ -13,11 +13,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = request.nextUrl;
 
   const place = parseList(searchParams.get("place"));
-  const subject = parseList(searchParams.get("subject"));
   const color = parseList(searchParams.get("color"));
   const cursor = searchParams.get("cursor") ?? undefined;
 
-  const page = await getPhotos({ place, subject, color, cursor });
+  const page = await getPhotos({ place, color, cursor });
 
   return NextResponse.json(page, {
     headers: {
