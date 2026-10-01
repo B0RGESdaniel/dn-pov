@@ -24,6 +24,11 @@ interface DragElementsProps {
   dragPropagation?: boolean;
   selectedOnTop?: boolean;
   className?: string;
+  // Ordem inicial de z-index: por padrão o item de menor índice nasce no
+  // fundo da pilha (z mais baixo) e o de maior índice no topo. true inverte
+  // isso — usado quando a ordem de "pouso" da animação de entrada precisa
+  // terminar com o índice 0 por cima (ver components/memory-stack.tsx).
+  reverseInitialZOrder?: boolean;
   onItemTap?: (index: number) => void;
   itemStyle?: (index: number) => CSSProperties;
   // Animação de entrada por item (opcional). Pode incluir x/y sem problema —
@@ -43,6 +48,7 @@ export function DragElements({
   dragPropagation = true,
   selectedOnTop = true,
   className,
+  reverseInitialZOrder = false,
   onItemTap,
   itemStyle,
   itemInitial,
@@ -51,8 +57,15 @@ export function DragElements({
 }: DragElementsProps) {
   const constraintsRef = useRef<HTMLDivElement>(null);
   const childCount = Children.count(children);
+
+  function initialZIndices(count: number) {
+    return Array.from({ length: count }, (_, i) =>
+      reverseInitialZOrder ? count - 1 - i : i,
+    );
+  }
+
   const [zIndices, setZIndices] = useState<number[]>(() =>
-    Array.from({ length: childCount }, (_, i) => i),
+    initialZIndices(childCount),
   );
   const [isDragging, setIsDragging] = useState(false);
   const draggedRef = useRef<Set<number>>(new Set());
@@ -64,7 +77,7 @@ export function DragElements({
   const [prevChildCount, setPrevChildCount] = useState(childCount);
   if (childCount !== prevChildCount) {
     setPrevChildCount(childCount);
-    setZIndices(Array.from({ length: childCount }, (_, i) => i));
+    setZIndices(initialZIndices(childCount));
   }
 
   function bringToFront(index: number) {

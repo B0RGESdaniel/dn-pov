@@ -14,13 +14,21 @@ const MAX_ROTATE = 14;
 // tirada do quadro pra ler a memória com mais calma.
 const PICKED_SCALE = 1.18;
 
-// Entrada em cascata: as polaroids caem de cima pra baixo e vão "pousando"
-// na pilha uma depois da outra, na mesma ordem em que nascem empilhadas
-// (zIndices parte como identidade, então index == posição na pilha no
-// primeiro render). Cap no stagger pra pilhas grandes não demorarem uma
-// eternidade pra aparecer toda.
-const ENTRANCE_FALL_DISTANCE = 480;
-const ENTRANCE_STAGGER_STEP = 0.08;
+// Entrada em cascata: cada polaroid nasce grande e deslocada pra cima —
+// como se estivesse na mão, perto da câmera — e ao ser "solta" encolhe pro
+// tamanho normal enquanto cai até a posição final no fundo da pilha. A mola
+// no transition dá aquele "baque" de pouso ao chegar no tamanho final.
+//
+// photos vem ordenado do mais recente pro mais antigo (DESC), mas a pilha
+// deve "nascer" na ordem cronológica: a memória mais antiga cai primeiro
+// (vai pro fundo) e a mais recente cai por último (fica por cima) — daí o
+// delay usar o índice invertido. reverseInitialZOrder acompanha essa mesma
+// inversão pro z-index inicial não ficar incoerente com a ordem de pouso
+// (quem pousa por último tem que nascer por cima, não embaixo). Cap no
+// stagger pra pilhas grandes não demorarem uma eternidade pra aparecer toda.
+const ENTRANCE_FALL_DISTANCE = 220;
+const ENTRANCE_HELD_SCALE = 1.5;
+const ENTRANCE_STAGGER_STEP = 0.1;
 const ENTRANCE_STAGGER_CAP = 10;
 
 // Ângulo de repouso de cada polaroid, determinístico por índice (mesma foto
@@ -46,13 +54,22 @@ export function MemoryStack({ photos }: MemoryStackProps) {
   return (
     <DragElements
       className="memory-board"
+      reverseInitialZOrder
       itemStyle={() => ({ left: "50%", top: "50%", translate: "-50% -50%" })}
-      itemInitial={() => ({ opacity: 0, y: -ENTRANCE_FALL_DISTANCE, scale: 0.9 })}
+      itemInitial={() => ({
+        opacity: 0,
+        y: -ENTRANCE_FALL_DISTANCE,
+        scale: ENTRANCE_HELD_SCALE,
+      })}
       itemAnimate={() => ({ opacity: 1, y: 0, scale: 1 })}
       itemTransition={(index) => ({
-        duration: 0.5,
-        ease: "easeIn",
-        delay: Math.min(index, ENTRANCE_STAGGER_CAP) * ENTRANCE_STAGGER_STEP,
+        type: "spring",
+        stiffness: 300,
+        damping: 22,
+        mass: 0.7,
+        delay:
+          Math.min(photos.length - 1 - index, ENTRANCE_STAGGER_CAP) *
+          ENTRANCE_STAGGER_STEP,
       })}
       onItemTap={(index) => {
         const photo = photos[index];
