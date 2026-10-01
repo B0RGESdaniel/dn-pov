@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1113.0",
+    "@clack/prompts": "^1.8.1",
     "@libsql/client": "^0.17.4",
     "clsx": "^2.1.1",
     "cobe": "^2.0.1",
