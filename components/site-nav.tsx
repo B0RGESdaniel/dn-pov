@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
+import { Eye } from "lucide-react";
 import { useRef, useState } from "react";
 
 const NAV_ITEMS = [
@@ -192,9 +193,10 @@ export function SiteNav() {
     <nav className="absolute top-0 z-20 flex w-full items-center gap-2 px-4 py-3 sm:px-6">
       <Link
         href="/"
-        className="mr-4 font-display text-lg tracking-tight text-accent transition-colors duration-500"
+        className="mr-4 text-accent transition-colors duration-500"
+        aria-label="Início"
       >
-        dn-pov
+        <Eye className="h-7 w-7" />
       </Link>
       {NAV_ITEMS.map((item) => (
         <RollingNavLink
