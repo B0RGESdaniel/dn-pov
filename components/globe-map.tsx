@@ -149,13 +149,15 @@ export function GlobeMap({ places }: GlobeMapProps) {
     [places],
   );
 
-  // Tamanho do globo = o menor entre largura e altura disponíveis no stage
-  // (capado em GLOBE_MAX_SIZE), aplicado como width/height explícitos (px)
-  // no wrapper — em vez de aspect-square + max-height, que só restringe um
-  // dos dois eixos e deixa o globo achatado quando a altura é o fator mais
-  // curto. Em layout effect (não effect comum) pra já aplicar antes do
-  // primeiro paint e antes do efeito abaixo criar o globo com o tamanho
-  // certo.
+  // Tamanho do globo = o menor entre largura e altura disponíveis no
+  // CONTENT-BOX do stage (clientWidth/clientHeight menos o padding do
+  // próprio stage — px-4/sm:px-6 e pb-20/sm:pb-28), capado em
+  // GLOBE_MAX_SIZE, aplicado como width/height explícitos (px) no wrapper.
+  // Precisa subtrair o padding: clientWidth/clientHeight já incluem padding,
+  // mas o flexbox só reserva pro item (wrapper) o espaço do content-box no
+  // eixo principal — sem subtrair, pedíamos um width maior do que o
+  // disponível e o flex-shrink espremia só a largura (a altura, por ser o
+  // eixo cruzado, não encolhe da mesma forma), achatando o globo.
   useLayoutEffect(() => {
     const stage = stageRef.current;
     const wrapper = wrapperRef.current;
@@ -163,9 +165,14 @@ export function GlobeMap({ places }: GlobeMapProps) {
 
     function updateSize() {
       if (!stage || !wrapper) return;
+      const stageStyle = getComputedStyle(stage);
+      const paddingX =
+        parseFloat(stageStyle.paddingLeft) + parseFloat(stageStyle.paddingRight);
+      const paddingY =
+        parseFloat(stageStyle.paddingTop) + parseFloat(stageStyle.paddingBottom);
       const size = Math.min(
-        stage.clientWidth,
-        stage.clientHeight,
+        stage.clientWidth - paddingX,
+        stage.clientHeight - paddingY,
         GLOBE_MAX_SIZE,
       );
       wrapper.style.width = `${size}px`;
