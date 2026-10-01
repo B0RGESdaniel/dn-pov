@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { login, LoginState } from "./actions";
 
 const initialState: LoginState = null;
@@ -36,6 +37,13 @@ export default function AdminLoginPage() {
         >
           {pending ? "Entrando..." : "Entrar"}
         </button>
+
+        <Link
+          href="/"
+          className="block text-center text-sm text-muted hover:text-foreground"
+        >
+          Voltar pra home
+        </Link>
       </form>
     </div>
   );
