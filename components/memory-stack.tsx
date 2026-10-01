@@ -14,6 +14,15 @@ const MAX_ROTATE = 14;
 // tirada do quadro pra ler a memória com mais calma.
 const PICKED_SCALE = 1.18;
 
+// Entrada em cascata: as polaroids caem de cima pra baixo e vão "pousando"
+// na pilha uma depois da outra, na mesma ordem em que nascem empilhadas
+// (zIndices parte como identidade, então index == posição na pilha no
+// primeiro render). Cap no stagger pra pilhas grandes não demorarem uma
+// eternidade pra aparecer toda.
+const ENTRANCE_FALL_DISTANCE = 480;
+const ENTRANCE_STAGGER_STEP = 0.08;
+const ENTRANCE_STAGGER_CAP = 10;
+
 // Ângulo de repouso de cada polaroid, determinístico por índice (mesma foto
 // sempre nasce com o mesmo ângulo) — alterna lado e varia a magnitude de
 // forma bem espalhada (razão áurea), pra dar aquele ar de pilha jogada, sem
@@ -38,6 +47,13 @@ export function MemoryStack({ photos }: MemoryStackProps) {
     <DragElements
       className="memory-board"
       itemStyle={() => ({ left: "50%", top: "50%", translate: "-50% -50%" })}
+      itemInitial={() => ({ opacity: 0, y: -ENTRANCE_FALL_DISTANCE, scale: 0.9 })}
+      itemAnimate={() => ({ opacity: 1, y: 0, scale: 1 })}
+      itemTransition={(index) => ({
+        duration: 0.5,
+        ease: "easeIn",
+        delay: Math.min(index, ENTRANCE_STAGGER_CAP) * ENTRANCE_STAGGER_STEP,
+      })}
       onItemTap={(index) => {
         const photo = photos[index];
         setPickedId((current) => (current === photo.id ? null : photo.id));

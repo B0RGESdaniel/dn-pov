@@ -2,7 +2,7 @@
 
 import { Children, useRef, useState } from "react";
 import type { CSSProperties, ReactNode, RefObject } from "react";
-import { InertiaOptions, motion } from "motion/react";
+import { InertiaOptions, motion, Target, Transition } from "motion/react";
 
 // Vendorizado de https://www.fancycomponents.dev/docs/components/blocks/drag-elements
 // (`npx shadcn add @fancy/drag-elements`), com dois ajustes: export nomeado
@@ -26,6 +26,12 @@ interface DragElementsProps {
   className?: string;
   onItemTap?: (index: number) => void;
   itemStyle?: (index: number) => CSSProperties;
+  // Animação de entrada por item (opcional). Pode incluir x/y sem problema —
+  // drag só assume essas motion values quando o usuário começa a arrastar,
+  // depois que a animação de entrada já terminou.
+  itemInitial?: (index: number) => Target;
+  itemAnimate?: (index: number) => Target;
+  itemTransition?: (index: number) => Transition;
 }
 
 export function DragElements({
@@ -39,6 +45,9 @@ export function DragElements({
   className,
   onItemTap,
   itemStyle,
+  itemInitial,
+  itemAnimate,
+  itemTransition,
 }: DragElementsProps) {
   const constraintsRef = useRef<HTMLDivElement>(null);
   const childCount = Children.count(children);
@@ -77,6 +86,9 @@ export function DragElements({
       {Children.map(children, (child, index) => (
         <motion.div
           key={index}
+          initial={itemInitial?.(index)}
+          animate={itemAnimate?.(index)}
+          transition={itemTransition?.(index)}
           drag
           dragElastic={dragElastic}
           dragConstraints={dragConstraints || constraintsRef}
