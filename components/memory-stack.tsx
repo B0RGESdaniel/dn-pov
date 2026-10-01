@@ -12,7 +12,7 @@ interface MemoryStackProps {
 const MAX_ROTATE = 14;
 // Quanto a foto aumenta ao ser "pega" (clicada) — como se tivesse sido
 // tirada do quadro pra ler a memória com mais calma.
-const PICKED_SCALE = 1.18;
+const PICKED_SCALE = 1.4;
 
 // Entrada em cascata: cada polaroid nasce grande e deslocada pra cima —
 // como se estivesse na mão, perto da câmera — e ao ser "solta" encolhe pro
@@ -100,7 +100,9 @@ export function MemoryStack({ photos }: MemoryStackProps) {
                 blurDataURL={photo.blurDataUrl ?? undefined}
               />
             </div>
-            <p className="memory-card-caption font-handwritten">{photo.memory}</p>
+            <p className="memory-card-caption font-handwritten">
+              {photo.memory}
+            </p>
           </div>
         );
       })}
