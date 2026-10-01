@@ -4,7 +4,7 @@ import createGlobe, { COBEOptions } from "cobe";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PlaceAlbum } from "@/lib/db";
 import { useZoomTransition } from "@/components/zoom-transition";
 
@@ -15,6 +15,8 @@ interface GlobeMapProps {
 const DRAG_SENSITIVITY = 0.005;
 const FOCUS_EASING = 0.06;
 const MARKER_SIZE = 0.02; // mesmo valor do showcase "Polaroids" de cobe.vercel.app
+// Tamanho máximo do globo em px (equivalente ao antigo max-w-160 em Tailwind).
+const GLOBE_MAX_SIZE = 640;
 
 // Cores padrão do globo (mesmas usadas na criação) — volta pra elas quando
 // o local em foco não tem colorAccent definido.
@@ -106,6 +108,10 @@ function polaroidRotate(placeId: number): number {
 export function GlobeMap({ places }: GlobeMapProps) {
   const { trigger: triggerZoomTransition } = useZoomTransition();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // stageRef é a área flex-1 que sobra pro globo (abaixo do nome, acima do
+  // botão "Explorar"); wrapperRef é o quadrado em si, cujo tamanho em px é
+  // calculado a partir do espaço do stage.
+  const stageRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<ReturnType<typeof createGlobe> | null>(null);
 
@@ -143,13 +149,37 @@ export function GlobeMap({ places }: GlobeMapProps) {
     [places],
   );
 
+  // Tamanho do globo = o menor entre largura e altura disponíveis no stage
+  // (capado em GLOBE_MAX_SIZE), aplicado como width/height explícitos (px)
+  // no wrapper — em vez de aspect-square + max-height, que só restringe um
+  // dos dois eixos e deixa o globo achatado quando a altura é o fator mais
+  // curto. Em layout effect (não effect comum) pra já aplicar antes do
+  // primeiro paint e antes do efeito abaixo criar o globo com o tamanho
+  // certo.
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    const wrapper = wrapperRef.current;
+    if (!stage || !wrapper) return;
+
+    function updateSize() {
+      if (!stage || !wrapper) return;
+      const size = Math.min(
+        stage.clientWidth,
+        stage.clientHeight,
+        GLOBE_MAX_SIZE,
+      );
+      wrapper.style.width = `${size}px`;
+      wrapper.style.height = `${size}px`;
+      widthRef.current = size;
+    }
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
   useEffect(() => {
     if (!canvasRef.current || !wrapperRef.current) return;
-
-    const updateWidth = () => {
-      widthRef.current = wrapperRef.current?.clientWidth ?? widthRef.current;
-    };
-    updateWidth();
 
     globeRef.current = createGlobe(canvasRef.current, {
       devicePixelRatio: 2,
@@ -204,14 +234,8 @@ export function GlobeMap({ places }: GlobeMapProps) {
       frameId = requestAnimationFrame(animate);
     });
 
-    const onResize = () => {
-      updateWidth();
-    };
-    window.addEventListener("resize", onResize);
-
     return () => {
       cancelAnimationFrame(frameId);
-      window.removeEventListener("resize", onResize);
       globeRef.current?.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só cria o globo uma vez; markers atualizam via effect abaixo
@@ -374,7 +398,10 @@ export function GlobeMap({ places }: GlobeMapProps) {
             </div>
           </div>
 
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pb-20 sm:px-6 sm:pb-28">
+          <div
+            ref={stageRef}
+            className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pb-20 sm:px-6 sm:pb-28"
+          >
             <button
               onClick={() => focusPlaceByOffset(-1)}
               aria-label="Local anterior"
@@ -383,10 +410,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
               ←
             </button>
 
-            <div
-              ref={wrapperRef}
-              className="relative aspect-square w-full max-w-160 touch-none"
-            >
+            <div ref={wrapperRef} className="relative touch-none">
               <canvas
                 ref={canvasRef}
                 onPointerDown={handlePointerDown}
