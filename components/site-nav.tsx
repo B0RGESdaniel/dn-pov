@@ -81,7 +81,7 @@ type NavFont = "mono" | "handwritten" | "fraunces";
 const NAV_FONT_CLASSES: Record<NavFont, string> = {
   mono: "font-mono text-xs",
   handwritten: "font-handwritten text-sm",
-  fraunces: "font-fraunces text-sm font-semibold",
+  fraunces: "font-fraunces text-xs font-semibold",
 };
 
 // Transição do fade ao trocar de fonte entre rotas — mascara a troca de
