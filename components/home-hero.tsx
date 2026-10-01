@@ -107,12 +107,23 @@ interface DeviceMotionEventWithPermission {
 // accelerationIncludingGravity.x/.y é a projeção do vetor gravidade nos
 // eixos do aparelho — varia de forma contínua conforme ele gira, sem o
 // "salto" que os ângulos de Euler do deviceorientation (alpha/beta/gamma)
-// têm perto de certas inclinações (gamma troca de sinal de repente — é
-// esse salto que causava o glitch). Por isso usamos o acelerômetro
-// (devicemotion) em vez do giroscópio orientado (deviceorientation) pra
-// essa sombra: ~6.5 m/s² já é "bem inclinado pro lado" na prática.
-const GRAVITY_RANGE = 3.5;
+// têm perto de certas inclinações. Por isso usamos o acelerômetro
+// (devicemotion) em vez do giroscópio orientado (deviceorientation).
+const GRAVITY_RANGE = 1.4;
 const PERSPECTIVE_SMOOTHING = 0.15;
+
+// Perto do centro (aparelho quase na vertical), o próprio ruído do sensor
+// faz x/y oscilar em torno de zero — cruzando de positivo pra negativo e
+// voltando várias vezes por segundo, o que lê como um "flicker" na sombra.
+// Zona-morta: valores pequenos (abaixo do limiar) são tratados como zero
+// antes de qualquer cálculo, então o ruído perto do centro não vira
+// mudança de sinal visível. É a mesma técnica usada em joysticks/sticks
+// analógicos de controle (deadzone) pra evitar drift por ruído do sensor.
+const GRAVITY_DEADZONE = 0.2;
+
+function applyDeadzone(value: number, deadzone: number) {
+  return Math.abs(value) < deadzone ? 0 : value;
+}
 
 function usePointerPerspectiveShadow(maxOffset: number) {
   const ref = useRef<HTMLParagraphElement>(null);
@@ -120,6 +131,7 @@ function usePointerPerspectiveShadow(maxOffset: number) {
     `${maxOffset}px ${maxOffset}px 0 ${PERSPECTIVE_SHADOW_COLOR}`,
   );
   const smoothedRef = useRef({ dx: maxOffset, dy: maxOffset });
+  const baselineRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     function handlePointerMove(event: PointerEvent) {
@@ -147,16 +159,39 @@ function usePointerPerspectiveShadow(maxOffset: number) {
 
     // Sem mouse (celular), o equivalente é inclinar o aparelho: a
     // componente x/y da gravidade nos eixos do aparelho faz o mesmo papel
-    // que a posição do cursor faz no desktop.
+    // que a posição do cursor faz no desktop. "Vertical perfeito" (x=y=0
+    // cru) não é como ninguém segura o celular pra olhar a tela de
+    // verdade — o ângulo natural de leitura já carrega um y diferente de
+    // zero, então sem calibração o efeito nunca passa pelo centro. Por
+    // isso guardamos a primeira leitura como "zero" (baselineRef) e
+    // medimos tudo daí pra frente como desvio relativo a ela — a mesma
+    // técnica de calibração usada em controles/apps de tilt (zerar o
+    // sensor na orientação em que a pessoa já está segurando o aparelho,
+    // em vez de usar a vertical absoluta como referência).
     function handleDeviceMotion(event: DeviceMotionEvent) {
       const gravity = event.accelerationIncludingGravity;
       if (!gravity) return;
 
-      const x = gravity.x ?? 0;
-      const y = gravity.y ?? 0;
+      const rawX = gravity.x ?? 0;
+      const rawY = gravity.y ?? 0;
 
-      const targetDx = clamp((x / GRAVITY_RANGE) * maxOffset, -maxOffset, maxOffset);
-      const targetDy = clamp((-y / GRAVITY_RANGE) * maxOffset, -maxOffset, maxOffset);
+      if (!baselineRef.current) {
+        baselineRef.current = { x: rawX, y: rawY };
+      }
+
+      const x = applyDeadzone(rawX - baselineRef.current.x, GRAVITY_DEADZONE);
+      const y = applyDeadzone(rawY - baselineRef.current.y, GRAVITY_DEADZONE);
+
+      const targetDx = clamp(
+        (x / GRAVITY_RANGE) * maxOffset,
+        -maxOffset,
+        maxOffset,
+      );
+      const targetDy = clamp(
+        (-y / GRAVITY_RANGE) * maxOffset,
+        -maxOffset,
+        maxOffset,
+      );
 
       const smoothed = smoothedRef.current;
       smoothed.dx += (targetDx - smoothed.dx) * PERSPECTIVE_SMOOTHING;
@@ -217,7 +252,7 @@ function usePointerPerspectiveShadow(maxOffset: number) {
 
 export function HomeHero() {
   const { ref: perspectiveRef, shadow: perspectiveShadow } =
-    usePointerPerspectiveShadow(14);
+    usePointerPerspectiveShadow(10);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
 
   return (
@@ -234,7 +269,7 @@ export function HomeHero() {
           </p>
           <p
             ref={perspectiveRef}
-            className="font-display text-5xl uppercase tracking-[0.08em] text-foreground md:text-7xl"
+            className="font-display text-5xl uppercase tracking-[0.08em] text-red md:text-7xl"
             style={{ textShadow: perspectiveShadow }}
           >
             perspective
@@ -266,7 +301,9 @@ export function HomeHero() {
                     current === destination.href ? null : current,
                   )
                 }
-                style={isActive ? BUTTON_BACKGROUNDS[destination.href] : undefined}
+                style={
+                  isActive ? BUTTON_BACKGROUNDS[destination.href] : undefined
+                }
                 className={`relative flex h-16 w-64 items-center justify-center overflow-hidden px-8 text-2xl tracking-widest transition-all duration-700 ease-out md:w-72 ${
                   isActive
                     ? destination.className
