@@ -353,8 +353,17 @@ export function GlobeMap({ places }: GlobeMapProps) {
 
   // Janela de 3 slots do trilho (-1 anterior, 0 atual, 1 próximo). Com 1 ou 2
   // locais no total, offsets diferentes podem cair no mesmo local — dedup por
-  // id pra não repetir key no AnimatePresence.
-  const seenPlaceIds = new Set<number>();
+  // id pra não repetir key no AnimatePresence. Prioriza o offset 0 (centro)
+  // quando há duplicata: com só 1 local, os três offsets caem no mesmo
+  // local, e manter o -1 (em vez do 0) deixava o nome deslocado pra
+  // esquerda e com opacidade reduzida (estilo dos slots não-centrais).
+  const slotOffsetByPlaceId = new Map<number, number>();
+  for (const offset of [0, -1, 1]) {
+    const place = places[(baseIndex + offset + places.length) % places.length];
+    if (!slotOffsetByPlaceId.has(place.tag.id)) {
+      slotOffsetByPlaceId.set(place.tag.id, offset);
+    }
+  }
   const trackSlots =
     places.length === 0
       ? []
@@ -363,11 +372,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
             offset,
             place: places[(baseIndex + offset + places.length) % places.length],
           }))
-          .filter(({ place }) => {
-            if (seenPlaceIds.has(place.tag.id)) return false;
-            seenPlaceIds.add(place.tag.id);
-            return true;
-          });
+          .filter(({ offset, place }) => slotOffsetByPlaceId.get(place.tag.id) === offset);
 
   return (
     <div className="flex h-[100svh] flex-col">
