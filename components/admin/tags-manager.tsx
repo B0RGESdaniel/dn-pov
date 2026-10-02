@@ -90,11 +90,23 @@ function TagCategorySection({
               className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 py-2"
             >
               <div className="flex items-center gap-3">
-                {tag.colorBg && (
-                  <span
-                    className="h-4 w-4 shrink-0 rounded-full border border-border"
-                    style={{ backgroundColor: tag.colorBg }}
-                  />
+                {(tag.colorBg || tag.colorAccent) && (
+                  <span className="flex shrink-0 items-center gap-1">
+                    {tag.colorBg && (
+                      <span
+                        className="h-4 w-4 rounded-full border border-border"
+                        style={{ backgroundColor: tag.colorBg }}
+                        title="Cor fundo"
+                      />
+                    )}
+                    {tag.colorAccent && (
+                      <span
+                        className="h-4 w-4 rounded-full border border-border"
+                        style={{ backgroundColor: tag.colorAccent }}
+                        title="Cor accent"
+                      />
+                    )}
+                  </span>
                 )}
                 <span className="text-foreground">{tag.name}</span>
                 <span className="text-xs text-muted">
