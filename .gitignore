@@ -19,6 +19,11 @@
 /.next/
 /out/
 
+# serwist (service worker gerado no build)
+/public/sw.js
+/public/sw.js.map
+/public/swe-worker-*.js
+
 # production
 /build
 

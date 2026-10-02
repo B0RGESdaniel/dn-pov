@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Caveat, Fraunces, Poppins } from "next/font/google";
+import { SerwistProvider } from "@serwist/next/react";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -29,6 +30,15 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "dn-pov",
   description: "Arquivo pessoal de fotos",
+  appleWebApp: {
+    capable: true,
+    title: "dn-pov",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#141414",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -39,7 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${poppins.variable} ${caveat.variable} ${fraunces.variable} h-full scroll-smooth antialiased`}
     >
       <body className="min-h-full flex flex-col overflow-x-hidden bg-background text-foreground font-sans">
-        {children}
+        <SerwistProvider swUrl="/sw.js">{children}</SerwistProvider>
       </body>
     </html>
   );
