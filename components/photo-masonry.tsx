@@ -1,7 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { motion } from "motion/react";
 import { Photo, PhotoFilters, PhotosPage } from "@/types/photo";
 import { Lightbox } from "@/components/lightbox";
@@ -46,17 +53,26 @@ function columnsForWidth(width: number): number {
   return COLUMN_BREAKPOINTS.find((bp) => width >= bp.minWidth)!.columns;
 }
 
-function useColumnCount(): number {
+// Mede a largura real do próprio container do grid (via ResizeObserver) em
+// vez de window.innerWidth. Window-based quebrava ao abrir a página de um
+// local/cor pela transição de zoom (components/zoom-transition.tsx): o app
+// inteiro é montado de novo sob um wrapper que anima scale/opacity, e medir
+// a janela nesse meio-tempo é frágil. ResizeObserver reage ao tamanho real
+// do elemento, imune a qualquer timing de montagem ou transição em volta.
+function useColumnCount(containerRef: RefObject<HTMLDivElement | null>): number {
   const [columns, setColumns] = useState(2);
 
   useEffect(() => {
-    function update() {
-      setColumns(columnsForWidth(window.innerWidth));
-    }
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width !== undefined) setColumns(columnsForWidth(width));
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [containerRef]);
 
   return columns;
 }
@@ -73,7 +89,8 @@ export function PhotoMasonry({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const columnCount = useColumnCount();
+  const gridRef = useRef<HTMLDivElement>(null);
+  const columnCount = useColumnCount(gridRef);
 
   // Empacotamento guloso: cada foto entra na coluna com menor altura
   // acumulada até agora, estimada pela proporção altura/largura (todas as
@@ -150,7 +167,7 @@ export function PhotoMasonry({
 
   return (
     <div className="px-4 py-4 sm:px-6">
-      <div className="flex gap-3 sm:gap-4">
+      <div ref={gridRef} className="flex gap-3 sm:gap-4">
         {columns.map((column, columnIndex) => (
           <div key={columnIndex} className="flex flex-1 flex-col gap-3 sm:gap-4">
             {column.map(({ photo, index }) => (
