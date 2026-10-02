@@ -32,9 +32,14 @@ const COLOR_PICKER_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(COLOR_
 export function ColorGrid({ colors }: ColorGridProps) {
   if (colors.length === 0) {
     return (
-      <p className="p-8 pt-24 text-center font-mono text-xs uppercase tracking-widest text-muted">
-        nenhuma cor cadastrada ainda
-      </p>
+      <div className="flex min-h-screen items-center justify-center p-8">
+        <p
+          className="text-center font-display text-2xl uppercase tracking-widest sm:text-3xl"
+          style={{ color: "#2563eb" }}
+        >
+          nenhuma cor cadastrada ainda
+        </p>
+      </div>
     );
   }
 
