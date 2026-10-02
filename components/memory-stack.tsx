@@ -45,9 +45,14 @@ export function MemoryStack({ photos }: MemoryStackProps) {
 
   if (photos.length === 0) {
     return (
-      <p className="p-8 text-center font-mono text-xs uppercase tracking-widest text-muted">
-        nenhuma memória salva ainda
-      </p>
+      <div className="flex h-full w-full items-center justify-center p-8">
+        <p
+          className="text-center font-display text-2xl uppercase tracking-widest sm:text-3xl"
+          style={{ color: "var(--foreground)" }}
+        >
+          nenhuma memória salva ainda
+        </p>
+      </div>
     );
   }
 
