@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
-import { Eye } from "lucide-react";
-import { useRef, useState } from "react";
+import { Eye, MapPin } from "lucide-react";
+import { ReactNode, useRef, useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/mural", label: "mural" },
@@ -94,12 +94,14 @@ const fontSwapTransition = { duration: 0.2, ease: "easeOut" as const };
 function RollingNavLink({
   href,
   label,
+  icon,
   isActive,
   neobrutalist,
   font = "mono",
 }: {
   href: string;
   label: string;
+  icon?: ReactNode;
   isActive: boolean;
   neobrutalist?: boolean;
   font?: NavFont;
@@ -129,7 +131,7 @@ function RollingNavLink({
         focused.current = false;
         requestActive(hovered.current);
       }}
-      className={`rounded-sm px-2.5 py-1 uppercase tracking-wider transition-colors duration-500 sm:px-3 sm:py-1.5 sm:tracking-widest ${
+      className={`flex items-center gap-1 rounded-sm px-2.5 py-1 uppercase tracking-wider transition-colors duration-500 sm:px-3 sm:py-1.5 sm:tracking-widest ${
         isActive ? "bg-accent text-background" : "text-accent hover:text-accent"
       } ${
         neobrutalist && isActive
@@ -137,6 +139,7 @@ function RollingNavLink({
           : ""
       }`}
     >
+      {icon}
       <motion.span
         key={font}
         className={`relative block w-max overflow-hidden ${NAV_FONT_CLASSES[font]}`}
@@ -189,6 +192,13 @@ export function SiteNav() {
     ? decodeURIComponent(pathname.slice("/cor/".length).split("/")[0])
     : null;
 
+  // Mesma ideia em /mapa/<nome>: o item "mapa" mostra o nome do local em
+  // foco, com um MapPin à esquerda pra deixar claro que é um local (o "cor"
+  // não precisa de ícone porque o próprio texto já é inequívoco).
+  const mapaName = pathname.startsWith("/mapa/")
+    ? decodeURIComponent(pathname.slice("/mapa/".length).split("/")[0])
+    : null;
+
   return (
     <nav className="absolute top-0 z-20 flex w-full items-center gap-1 overflow-x-auto px-3 py-3 [scrollbar-width:none] sm:gap-2 sm:px-6 [&::-webkit-scrollbar]:hidden">
       <Link
@@ -202,7 +212,18 @@ export function SiteNav() {
         <RollingNavLink
           key={item.href}
           href={item.href}
-          label={item.href === "/cor" && corName ? corName : item.label}
+          label={
+            item.href === "/cor" && corName
+              ? corName
+              : item.href === "/mapa" && mapaName
+                ? mapaName
+                : item.label
+          }
+          icon={
+            item.href === "/mapa" && mapaName ? (
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+            ) : undefined
+          }
           isActive={
             pathname === item.href || pathname.startsWith(`${item.href}/`)
           }
