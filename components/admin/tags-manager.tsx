@@ -41,11 +41,23 @@ function TagCategorySection({
   const [isPending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  const [colorBg, setColorBg] = useState("");
+  const [colorAccent, setColorAccent] = useState("");
+
   function handleCreate(formData: FormData) {
     setError(null);
     startTransition(async () => {
       const result = await createTag(formData);
-      if (result?.error) setError(result.error);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+      // Campos de texto/number resetam sozinhos (comportamento nativo do
+      // React 19 pra <form action={fn}> bem-sucedido) — mas isso só vale pra
+      // inputs não controlados. colorBg/colorAccent são controlados (pro
+      // preview de contraste reagir ao digitar), então precisam de reset manual.
+      setColorBg("");
+      setColorAccent("");
     });
   }
 
@@ -145,8 +157,19 @@ function TagCategorySection({
             <Field label="Lon" name="lon" type="number" step="any" />
           </>
         )}
-        <Field label="Cor fundo" name="colorBg" placeholder="#rrggbb" />
-        <Field label="Cor accent" name="colorAccent" placeholder="#rrggbb" />
+        <ColorField
+          label="Cor fundo"
+          name="colorBg"
+          value={colorBg}
+          onChange={setColorBg}
+        />
+        <ColorField
+          label="Cor accent"
+          name="colorAccent"
+          value={colorAccent}
+          onChange={setColorAccent}
+        />
+        <ContrastPreview bg={colorBg} accent={colorAccent} />
         <button
           type="submit"
           disabled={isPending}
@@ -173,6 +196,8 @@ function TagEditRow({
   onError: (error: string | null) => void;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [colorBg, setColorBg] = useState(tag.colorBg ?? "");
+  const [colorAccent, setColorAccent] = useState(tag.colorAccent ?? "");
 
   function handleSubmit(formData: FormData) {
     onError(null);
@@ -208,18 +233,19 @@ function TagEditRow({
             />
           </>
         )}
-        <Field
+        <ColorField
           label="Cor fundo"
           name="colorBg"
-          placeholder="#rrggbb"
-          defaultValue={tag.colorBg ?? ""}
+          value={colorBg}
+          onChange={setColorBg}
         />
-        <Field
+        <ColorField
           label="Cor accent"
           name="colorAccent"
-          placeholder="#rrggbb"
-          defaultValue={tag.colorAccent ?? ""}
+          value={colorAccent}
+          onChange={setColorAccent}
         />
+        <ContrastPreview bg={colorBg} accent={colorAccent} />
         <button
           type="submit"
           disabled={isPending}
@@ -269,5 +295,79 @@ function Field({
         className="h-9 w-32 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:border-accent"
       />
     </label>
+  );
+}
+
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+// Input nativo type="color" (devolve hex direto, já é o próprio preview)
+// pareado com o campo de texto existente — clicar no quadrado abre o
+// seletor do navegador/SO, ou digita o hex direto no texto; os dois ficam
+// sincronizados via state controlado no componente pai.
+function ColorField({
+  label,
+  name,
+  value,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+}): ReactNode {
+  // input[type=color] exige um hex de 6 dígitos válido — enquanto o texto
+  // não chegar nesse formato (vazio, incompleto, inválido), o seletor cai
+  // num cinza neutro sem sobrescrever o que já foi digitado.
+  const pickerValue = HEX_COLOR_RE.test(value) ? value : "#000000";
+
+  return (
+    <label className="flex flex-col gap-1 text-xs text-muted">
+      {label}
+      <span className="flex items-center gap-1.5">
+        <input
+          type="color"
+          value={pickerValue}
+          onChange={(event) => onChange(event.target.value)}
+          aria-label={`${label} (seletor visual)`}
+          className="h-9 w-9 shrink-0 cursor-pointer rounded-md border border-border bg-background p-0.5"
+        />
+        <input
+          name={name}
+          type="text"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="#rrggbb"
+          className="h-9 w-24 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:border-accent"
+        />
+      </span>
+    </label>
+  );
+}
+
+// Preview auxiliar pra avaliar contraste visual: quadrado na cor de fundo
+// com um "A" grande na cor accent — mesma combinação usada de verdade no
+// tema dinâmico de /mapa e /cor (TagTheme). Cai num cinza neutro enquanto o
+// hex digitado não for válido, em vez de quebrar o style inline.
+function ContrastPreview({
+  bg,
+  accent,
+}: {
+  bg: string;
+  accent: string;
+}): ReactNode {
+  const safeBg = HEX_COLOR_RE.test(bg) ? bg : "#2a2a2a";
+  const safeAccent = HEX_COLOR_RE.test(accent) ? accent : "#8b867e";
+
+  return (
+    <div className="flex flex-col gap-1 text-xs text-muted">
+      Contraste
+      <div
+        className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-lg font-bold"
+        style={{ backgroundColor: safeBg, color: safeAccent }}
+        aria-hidden
+      >
+        A
+      </div>
+    </div>
   );
 }
