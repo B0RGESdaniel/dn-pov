@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Photo, PhotoFilters, PhotosPage } from "@/types/photo";
 import { Lightbox } from "@/components/lightbox";
@@ -30,6 +30,37 @@ const LOAD_ROOT_MARGIN = "800px 0px";
 const STAGGER_CYCLE = 12;
 const STAGGER_STEP = 0.05;
 
+// Breakpoints do grid (mesmos valores de columns-2/sm:columns-3/lg:columns-4
+// que este componente usava antes). CSS columns puro foi abandonado porque o
+// algoritmo de balanceamento do navegador pode preencher só parte das
+// colunas declaradas (deixando espaço vazio à direita) dependendo da
+// quantidade/distribuição das fotos — distribuímos as colunas manualmente
+// aqui pra garantir que todas sejam sempre usadas.
+const COLUMN_BREAKPOINTS: { minWidth: number; columns: number }[] = [
+  { minWidth: 1024, columns: 4 },
+  { minWidth: 640, columns: 3 },
+  { minWidth: 0, columns: 2 },
+];
+
+function columnsForWidth(width: number): number {
+  return COLUMN_BREAKPOINTS.find((bp) => width >= bp.minWidth)!.columns;
+}
+
+function useColumnCount(): number {
+  const [columns, setColumns] = useState(2);
+
+  useEffect(() => {
+    function update() {
+      setColumns(columnsForWidth(window.innerWidth));
+    }
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return columns;
+}
+
 export function PhotoMasonry({
   initialPhotos,
   initialCursor,
@@ -42,6 +73,32 @@ export function PhotoMasonry({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const columnCount = useColumnCount();
+
+  // Empacotamento guloso: cada foto entra na coluna com menor altura
+  // acumulada até agora, estimada pela proporção altura/largura (todas as
+  // colunas têm a mesma largura, então a proporção já diz quem fica mais
+  // "cheia"). Dá um masonry de verdade, não só um round-robin.
+  const columns = useMemo(() => {
+    const result: { photo: Photo; index: number }[][] = Array.from(
+      { length: columnCount },
+      () => [],
+    );
+    const heights = new Array(columnCount).fill(0);
+
+    photos.forEach((photo, index) => {
+      const aspectRatio =
+        (photo.height ?? FALLBACK_HEIGHT) / (photo.width ?? FALLBACK_WIDTH);
+      let shortest = 0;
+      for (let i = 1; i < columnCount; i++) {
+        if (heights[i] < heights[shortest]) shortest = i;
+      }
+      result[shortest].push({ photo, index });
+      heights[shortest] += aspectRatio;
+    });
+
+    return result;
+  }, [photos, columnCount]);
 
   useEffect(() => {
     onPhotosChange?.(photos);
@@ -93,34 +150,38 @@ export function PhotoMasonry({
 
   return (
     <div className="px-4 py-4 sm:px-6">
-      <div className="columns-2 gap-3 sm:columns-3 sm:gap-4 lg:columns-4">
-        {photos.map((photo, index) => (
-          <motion.button
-            key={photo.id}
-            onClick={() => setLightboxIndex(index)}
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{
-              duration: 0.4,
-              ease: "easeOut",
-              delay: (index % STAGGER_CYCLE) * STAGGER_STEP,
-            }}
-            className="mb-3 block w-full break-inside-avoid overflow-hidden rounded-sm bg-surface shadow-lg sm:mb-4"
-            aria-label={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
-          >
-            <Image
-              src={photo.thumbUrl}
-              alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
-              width={photo.width ?? FALLBACK_WIDTH}
-              height={photo.height ?? FALLBACK_HEIGHT}
-              className="h-auto w-full"
-              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-              placeholder={photo.blurDataUrl ? "blur" : undefined}
-              blurDataURL={photo.blurDataUrl ?? undefined}
-              priority={index < 8}
-            />
-          </motion.button>
+      <div className="flex gap-3 sm:gap-4">
+        {columns.map((column, columnIndex) => (
+          <div key={columnIndex} className="flex flex-1 flex-col gap-3 sm:gap-4">
+            {column.map(({ photo, index }) => (
+              <motion.button
+                key={photo.id}
+                onClick={() => setLightboxIndex(index)}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{
+                  duration: 0.4,
+                  ease: "easeOut",
+                  delay: (index % STAGGER_CYCLE) * STAGGER_STEP,
+                }}
+                className="block w-full overflow-hidden rounded-sm bg-surface shadow-lg"
+                aria-label={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
+              >
+                <Image
+                  src={photo.thumbUrl}
+                  alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
+                  width={photo.width ?? FALLBACK_WIDTH}
+                  height={photo.height ?? FALLBACK_HEIGHT}
+                  className="h-auto w-full"
+                  sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                  placeholder={photo.blurDataUrl ? "blur" : undefined}
+                  blurDataURL={photo.blurDataUrl ?? undefined}
+                  priority={index < 8}
+                />
+              </motion.button>
+            ))}
+          </div>
         ))}
       </div>
 
