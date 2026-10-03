@@ -49,7 +49,12 @@ if (keys.length > 0) {
 }
 
 s.start("Apagando fotos do banco");
-await db.batch([{ sql: "DELETE FROM photo_tags", args: [] }, { sql: "DELETE FROM photos", args: [] }]);
+await db.batch([
+  { sql: "DELETE FROM photo_tags", args: [] },
+  { sql: "DELETE FROM photos", args: [] },
+  // photos usa AUTOINCREMENT — sem isso o SQLite nunca reutiliza os ids antigos
+  { sql: "DELETE FROM sqlite_sequence WHERE name = 'photos'", args: [] },
+]);
 s.stop(`${photoCount} foto(s) apagada(s) do banco.`);
 
 p.outro("Pronto.");
