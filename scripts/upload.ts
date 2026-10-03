@@ -191,8 +191,11 @@ for (const file of imageFiles) {
     filePath = tempPath;
   }
 
-  const image = sharp(filePath);
+  const image = sharp(filePath).rotate(); // aplica a orientação do EXIF antes de redimensionar
   const metadata = await image.metadata();
+  const isSideways = metadata.orientation != null && metadata.orientation >= 5;
+  const width = isSideways ? metadata.height : metadata.width;
+  const height = isSideways ? metadata.width : metadata.height;
 
   const thumbBuffer = await image.clone().resize(400).webp({ quality: 80 }).toBuffer();
   const mediumBuffer = await image.clone().resize(1600).webp({ quality: 85 }).toBuffer();
@@ -218,8 +221,8 @@ for (const file of imageFiles) {
     url: mediumUrl,
     thumbUrl,
     blurDataUrl,
-    width: metadata.width,
-    height: metadata.height,
+    width,
+    height,
     takenAt: null,
     edited,
     memory,
