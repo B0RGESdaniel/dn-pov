@@ -1,5 +1,8 @@
 #!/usr/bin/env node
+import crypto from "crypto";
+import { execFileSync } from "child_process";
 import fs from "fs";
+import os from "os";
 import path from "path";
 import sharp from "sharp";
 import * as p from "@clack/prompts";
@@ -26,10 +29,14 @@ if (!folder) {
   process.exit(1);
 }
 
-const imageExtensions = [".jpg", ".jpeg", ".png", ".webp"];
-const imageFiles = fs
-  .readdirSync(folder)
+const imageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"];
+const allFiles = fs.readdirSync(folder, { withFileTypes: true }).filter((entry) => entry.isFile());
+const imageFiles = allFiles
+  .map((entry) => entry.name)
   .filter((file) => imageExtensions.includes(path.extname(file).toLowerCase()));
+const skippedFiles = allFiles
+  .map((entry) => entry.name)
+  .filter((file) => !imageExtensions.includes(path.extname(file).toLowerCase()));
 
 if (imageFiles.length === 0) {
   p.cancel(`Nenhuma imagem encontrada em "${folder}".`);
@@ -37,6 +44,11 @@ if (imageFiles.length === 0) {
 }
 
 p.log.info(`${imageFiles.length} foto(s) encontrada(s) em "${folder}".`);
+if (skippedFiles.length > 0) {
+  p.log.warn(
+    `${skippedFiles.length} arquivo(s) ignorado(s) (extensão não suportada): ${skippedFiles.join(", ")}`,
+  );
+}
 
 const existingTags = await getTags();
 const existingPlaces = existingTags.filter((tag) => tag.category === "place");
@@ -167,7 +179,18 @@ for (const file of imageFiles) {
   const s = p.spinner();
   s.start(`Processando ${file}`);
 
-  const filePath = path.join(folder, file);
+  const originalPath = path.join(folder, file);
+  const isHeic = [".heic", ".heif"].includes(path.extname(file).toLowerCase());
+
+  // sharp/libheif aqui não decodifica HEVC (licenciamento) — converte via sips antes.
+  let filePath = originalPath;
+  let tempPath: string | null = null;
+  if (isHeic) {
+    tempPath = path.join(os.tmpdir(), `${path.parse(file).name}-${crypto.randomUUID()}.jpg`);
+    execFileSync("sips", ["-s", "format", "jpeg", originalPath, "--out", tempPath]);
+    filePath = tempPath;
+  }
+
   const image = sharp(filePath);
   const metadata = await image.metadata();
 
@@ -175,16 +198,18 @@ for (const file of imageFiles) {
   const mediumBuffer = await image.clone().resize(1600).webp({ quality: 85 }).toBuffer();
   const blurBuffer = await image.clone().resize(20).webp({ quality: 20 }).toBuffer();
 
+  if (tempPath) fs.rmSync(tempPath, { force: true });
+
   const blurDataUrl = `data:image/webp;base64,${blurBuffer.toString("base64")}`;
-  const baseKey = path.parse(file).name;
+  const uniqueKey = crypto.randomUUID();
 
   const thumbUrl = await uploadObject({
-    key: `photos/${baseKey}-thumb.webp`,
+    key: `photos/${uniqueKey}-thumb.webp`,
     body: thumbBuffer,
     contentType: "image/webp",
   });
   const mediumUrl = await uploadObject({
-    key: `photos/${baseKey}-medium.webp`,
+    key: `photos/${uniqueKey}-medium.webp`,
     body: mediumBuffer,
     contentType: "image/webp",
   });
