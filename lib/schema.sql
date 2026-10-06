@@ -16,12 +16,14 @@ CREATE INDEX idx_photos_sort_key ON photos(sort_key, id);
 CREATE TABLE tags (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('place', 'subject', 'color')),
+  category TEXT NOT NULL CHECK (category IN ('place', 'color')),
+  parent_id INTEGER REFERENCES tags(id),  -- só em category='place': cidade -> país (NULL = é o país)
   lat REAL,
   lon REAL,
   color_bg TEXT,       -- só usado quando category = 'place'
   color_accent TEXT,   -- só usado quando category = 'place'
-  UNIQUE (name, category)
+  UNIQUE (name, category, parent_id),
+  CHECK (category = 'place' OR parent_id IS NULL)
 );
 
 CREATE TABLE photo_tags (

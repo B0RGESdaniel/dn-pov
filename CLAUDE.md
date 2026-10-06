@@ -41,11 +41,12 @@ CREATE TABLE tags (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   category TEXT NOT NULL CHECK (category IN ('place', 'color')),
+  parent_id INTEGER REFERENCES tags(id),  -- só em place: cidade -> país (NULL = é o país; só 2 níveis)
   lat REAL,           -- só usado quando category = 'place'
   lon REAL,
   color_bg TEXT,       -- tema dinâmico: local (tela de Mapa) ou cor (tela de Cor)
   color_accent TEXT,
-  UNIQUE (name, category)
+  UNIQUE (name, category, parent_id)
 );
 
 CREATE TABLE photo_tags (
