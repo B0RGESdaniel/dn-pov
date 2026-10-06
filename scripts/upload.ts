@@ -21,6 +21,41 @@ async function promptOrExit<T>(promise: Promise<T | symbol>): Promise<T> {
   return value as T;
 }
 
+// Usado tanto pra "+ Novo país" quanto "+ Nova cidade" — os dois níveis têm
+// os mesmos campos (lat/lon + cor do tema do Mapa).
+async function promptLocationDetails(label: string): Promise<{
+  lat: number | null;
+  lon: number | null;
+  colorBg: string | null;
+  colorAccent: string | null;
+}> {
+  const latRaw = await promptOrExit<string>(
+    p.text({ message: `Latitude do ${label} (opcional)`, placeholder: "-22.9" }),
+  );
+  const lonRaw = await promptOrExit<string>(
+    p.text({ message: `Longitude do ${label} (opcional)`, placeholder: "-43.2" }),
+  );
+  const colorBgRaw = await promptOrExit<string>(
+    p.text({
+      message: `Cor de fundo do ${label} — tema do Mapa (opcional)`,
+      placeholder: "#rrggbb",
+    }),
+  );
+  const colorAccentRaw = await promptOrExit<string>(
+    p.text({
+      message: `Cor accent do ${label} — tema do Mapa (opcional)`,
+      placeholder: "#rrggbb",
+    }),
+  );
+
+  return {
+    lat: latRaw.trim() ? Number(latRaw) : null,
+    lon: lonRaw.trim() ? Number(lonRaw) : null,
+    colorBg: colorBgRaw.trim() || null,
+    colorAccent: colorAccentRaw.trim() || null,
+  };
+}
+
 p.intro("Upload de fotos — dn-pov");
 
 const folder = process.argv[2];
@@ -53,58 +88,76 @@ if (skippedFiles.length > 0) {
 const existingTags = await getTags();
 const existingPlaces = existingTags.filter((tag) => tag.category === "place");
 const existingColors = existingTags.filter((tag) => tag.category === "color");
+const existingCountries = existingPlaces.filter((tag) => tag.parentId === null);
 
-// --- Local ---
-const placeChoice = await promptOrExit<string>(
+// --- País ---
+const countryChoice = await promptOrExit<string>(
   p.select({
-    message: "Local dessas fotos",
+    message: "País dessas fotos",
     options: [
       { value: NONE_OPTION, label: "Nenhum" },
-      ...existingPlaces.map((tag) => ({ value: tag.name, label: tag.name })),
-      { value: NEW_OPTION, label: "+ Novo local" },
+      ...existingCountries.map((tag) => ({ value: String(tag.id), label: tag.name })),
+      { value: NEW_OPTION, label: "+ Novo país" },
     ],
   }),
 );
 
-let place: string | null = null;
-let lat: number | null = null;
-let lon: number | null = null;
-let placeColorBg: string | null = null;
-let placeColorAccent: string | null = null;
+let countryId: number | null = null;
+let countryName: string | null = null;
 
-if (placeChoice === NEW_OPTION) {
-  place = await promptOrExit<string>(
+if (countryChoice === NEW_OPTION) {
+  countryName = await promptOrExit<string>(
     p.text({
-      message: "Nome do novo local",
+      message: "Nome do novo país",
       validate: (value) => ((value ?? "").trim() ? undefined : "Obrigatório"),
     }),
   );
+  const details = await promptLocationDetails("país");
+  const [countryTag] = await upsertTags([
+    { name: countryName, category: "place", parentId: null, ...details },
+  ]);
+  countryId = countryTag.id;
+} else if (countryChoice !== NONE_OPTION) {
+  const existing = existingCountries.find((tag) => tag.id === Number(countryChoice))!;
+  countryId = existing.id;
+  countryName = existing.name;
+}
 
-  const latRaw = await promptOrExit<string>(
-    p.text({ message: "Latitude (opcional)", placeholder: "-22.9" }),
-  );
-  const lonRaw = await promptOrExit<string>(
-    p.text({ message: "Longitude (opcional)", placeholder: "-43.2" }),
-  );
-  lat = latRaw.trim() ? Number(latRaw) : null;
-  lon = lonRaw.trim() ? Number(lonRaw) : null;
+// --- Cidade (só pergunta se escolheu um país) ---
+let cityId: number | null = null;
+let cityName: string | null = null;
 
-  const colorBgRaw = await promptOrExit<string>(
-    p.text({
-      message: "Cor de fundo do local — tema do Mapa (opcional)",
-      placeholder: "#rrggbb",
+if (countryId !== null) {
+  const existingCities = existingPlaces.filter((tag) => tag.parentId === countryId);
+
+  const cityChoice = await promptOrExit<string>(
+    p.select({
+      message: `Cidade em ${countryName}`,
+      options: [
+        { value: NONE_OPTION, label: "Nenhuma" },
+        ...existingCities.map((tag) => ({ value: String(tag.id), label: tag.name })),
+        { value: NEW_OPTION, label: "+ Nova cidade" },
+      ],
     }),
   );
-  const colorAccentRaw = await promptOrExit<string>(
-    p.text({
-      message: "Cor accent do local — tema do Mapa (opcional)",
-      placeholder: "#rrggbb",
-    }),
-  );
-  placeColorBg = colorBgRaw.trim() || null;
-  placeColorAccent = colorAccentRaw.trim() || null;
-} else if (placeChoice !== NONE_OPTION) {
-  place = placeChoice;
+
+  if (cityChoice === NEW_OPTION) {
+    cityName = await promptOrExit<string>(
+      p.text({
+        message: "Nome da nova cidade",
+        validate: (value) => ((value ?? "").trim() ? undefined : "Obrigatório"),
+      }),
+    );
+    const details = await promptLocationDetails("cidade");
+    const [cityTag] = await upsertTags([
+      { name: cityName, category: "place", parentId: countryId, ...details },
+    ]);
+    cityId = cityTag.id;
+  } else if (cityChoice !== NONE_OPTION) {
+    const existing = existingCities.find((tag) => tag.id === Number(cityChoice))!;
+    cityId = existing.id;
+    cityName = existing.name;
+  }
 }
 
 // --- Cores ---
@@ -143,10 +196,13 @@ const memoryRaw = await promptOrExit<string>(
 );
 const memory = memoryRaw.trim() || null;
 
+const locationLabel =
+  countryId === null ? "nenhum" : cityId === null ? countryName : `${cityName}, ${countryName}`;
+
 const confirmed = await promptOrExit<boolean>(
   p.confirm({
     message:
-      `Confirma: ${imageFiles.length} foto(s), local "${place ?? "nenhum"}", ` +
+      `Confirma: ${imageFiles.length} foto(s), local "${locationLabel}", ` +
       `cores [${colorNames.join(", ") || "nenhuma"}], ${edited ? "editadas" : "originais"}` +
       `${memory ? `, memória "${memory}"` : ""}?`,
   }),
@@ -156,24 +212,19 @@ if (!confirmed) {
   process.exit(0);
 }
 
-const tagInputs: NewTagInput[] = [
-  ...(place
-    ? [
-        {
-          name: place,
-          category: "place" as const,
-          lat,
-          lon,
-          colorBg: placeColorBg,
-          colorAccent: placeColorAccent,
-        },
-      ]
-    : []),
-  ...colorNames.map((name) => ({ name, category: "color" as const })),
-];
+const colorTagInputs: NewTagInput[] = colorNames.map((name) => ({
+  name,
+  category: "color" as const,
+}));
+const colorTagObjects = await upsertTags(colorTagInputs);
 
-const tagObjects = await upsertTags(tagInputs);
-const tagIds = tagObjects.map((tag) => tag.id);
+// País e cidade ficam linkados juntos na foto (quando os dois existem) — "Explorar"
+// no país já funciona filtrando só por ele, sem precisar resolver as cidades filhas.
+const tagIds = [
+  ...(countryId !== null ? [countryId] : []),
+  ...(cityId !== null ? [cityId] : []),
+  ...colorTagObjects.map((tag) => tag.id),
+];
 
 for (const file of imageFiles) {
   const s = p.spinner();
