@@ -3,19 +3,21 @@ import { getPhotos, getPlaces } from "@/lib/photos-source";
 import { TagTheme } from "@/components/tag-theme";
 import { PhotoMasonry } from "@/components/photo-masonry";
 
-export default async function MapaNomePage({ params }: PageProps<"/mapa/[nome]">) {
-  const { nome } = await params;
-  const name = decodeURIComponent(nome);
+export default async function MapaPaisPage({ params }: PageProps<"/mapa/[pais]">) {
+  const { pais } = await params;
+  const name = decodeURIComponent(pais);
 
   const places = await getPlaces();
-  const place = places.find((item) => item.tag.name === name);
-  if (!place) notFound();
+  const country = places.find(
+    (item) => item.tag.name === name && item.tag.parentId === null,
+  );
+  if (!country) notFound();
 
   const initialPage = await getPhotos({ place: [name] });
 
   return (
     <>
-      <TagTheme colorBg={place.tag.colorBg} colorAccent={place.tag.colorAccent} />
+      <TagTheme colorBg={country.tag.colorBg} colorAccent={country.tag.colorAccent} />
       <div className="pt-16 sm:pt-20">
         <PhotoMasonry
           key={name}

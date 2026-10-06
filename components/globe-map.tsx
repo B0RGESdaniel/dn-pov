@@ -18,6 +18,11 @@ const FOCUS_EASING = 0.06;
 const MARKER_SIZE = 0.02; // mesmo valor do showcase "Polaroids" de cobe.vercel.app
 // Tamanho máximo do globo em px (equivalente ao antigo max-w-160 em Tailwind).
 const GLOBE_MAX_SIZE = 640;
+// Zoom (cobe `scale`) ao entrar no nível de cidade — só separa os marcadores
+// na tela (projeção 2D dos pontos), não revela mais detalhe no mapa em si
+// (mapSamples do cobe é um orçamento fixo de pontos pro globo inteiro).
+const CITY_ZOOM_SCALE = 3;
+const COUNTRY_ZOOM_SCALE = 1;
 
 // Cores padrão do globo (mesmas usadas na criação) — volta pra elas quando
 // o local em foco não tem colorAccent definido.
@@ -57,6 +62,16 @@ function locationToAngles(
 
 function markerId(placeId: number): string {
   return `place-${placeId}`;
+}
+
+// País (parentId null) -> /mapa/<pais>; cidade -> /mapa/<pais>/<cidade> (rota
+// aninhada evita ambiguidade entre cidades homônimas em países diferentes).
+function mapaHref(place: PlaceAlbum, places: PlaceAlbum[]): string {
+  if (place.tag.parentId === null) {
+    return `/mapa/${encodeURIComponent(place.tag.name)}`;
+  }
+  const country = places.find((item) => item.tag.id === place.tag.parentId);
+  return `/mapa/${encodeURIComponent(country?.tag.name ?? "")}/${encodeURIComponent(place.tag.name)}`;
 }
 
 // Distância (em vw) entre o slot central (local em foco) e os slots
@@ -134,20 +149,39 @@ export function GlobeMap({ places }: GlobeMapProps) {
   const glowColorRef = useRef<[number, number, number]>(DEFAULT_GLOW_COLOR);
   const targetGlowColorRef =
     useRef<[number, number, number]>(DEFAULT_GLOW_COLOR);
+  // Mesmo esquema de easing do phi/theta/cor, só que pro zoom (scale do cobe)
+  // entre nível de país e de cidade.
+  const scaleRef = useRef(COUNTRY_ZOOM_SCALE);
+  const targetScaleRef = useRef(COUNTRY_ZOOM_SCALE);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // "country" = globo mostra só países (parentId null); "city" = só as
+  // cidades do país em foco (focusedCountryId) — ver visiblePlaces abaixo.
+  const [level, setLevel] = useState<"country" | "city">("country");
+  const [focusedCountryId, setFocusedCountryId] = useState<number | null>(null);
+
+  // Lista do nível atual: países (parentId null) quando "country", só as
+  // cidades do país em foco quando "city". Markers, carrossel e as setas
+  // ←/→ navegam só dentro dessa lista — nunca a `places` inteira.
+  const visiblePlaces = useMemo(
+    () =>
+      level === "country"
+        ? places.filter((place) => place.tag.parentId === null)
+        : places.filter((place) => place.tag.parentId === focusedCountryId),
+    [places, level, focusedCountryId],
+  );
 
   // O dot do marcador (size) marca o ponto exato; o cartão polaroid flutua
   // acima dele. O id é o que o cobe usa pra gerar os anchors/variáveis CSS
   // (--cobe-<id>, --cobe-visible-<id>) usados pelo polaroid HTML abaixo.
   const markers = useMemo<COBEOptions["markers"]>(
     () =>
-      places.map((place) => ({
+      visiblePlaces.map((place) => ({
         location: [place.tag.lat, place.tag.lon] as [number, number],
         size: MARKER_SIZE,
         id: markerId(place.tag.id),
       })),
-    [places],
+    [visiblePlaces],
   );
 
   // Tamanho do globo = o menor entre largura e altura disponíveis no
@@ -168,9 +202,11 @@ export function GlobeMap({ places }: GlobeMapProps) {
       if (!stage || !wrapper) return;
       const stageStyle = getComputedStyle(stage);
       const paddingX =
-        parseFloat(stageStyle.paddingLeft) + parseFloat(stageStyle.paddingRight);
+        parseFloat(stageStyle.paddingLeft) +
+        parseFloat(stageStyle.paddingRight);
       const paddingY =
-        parseFloat(stageStyle.paddingTop) + parseFloat(stageStyle.paddingBottom);
+        parseFloat(stageStyle.paddingTop) +
+        parseFloat(stageStyle.paddingBottom);
       const size = Math.min(
         stage.clientWidth - paddingX,
         stage.clientHeight - paddingY,
@@ -195,6 +231,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
       height: widthRef.current * 2,
       phi: phiRef.current,
       theta: thetaRef.current,
+      scale: scaleRef.current,
       dark: 1,
       diffuse: 1.2,
       mapSamples: 16000,
@@ -230,10 +267,13 @@ export function GlobeMap({ places }: GlobeMapProps) {
         (channel, i) =>
           channel + (targetGlowColorRef.current[i] - channel) * COLOR_EASING,
       ) as [number, number, number];
+      scaleRef.current +=
+        (targetScaleRef.current - scaleRef.current) * FOCUS_EASING;
 
       globeRef.current?.update({
         phi: phiRef.current,
         theta: thetaRef.current,
+        scale: scaleRef.current,
         width: widthRef.current * 2,
         height: widthRef.current * 2,
         baseColor: baseColorRef.current,
@@ -285,15 +325,22 @@ export function GlobeMap({ places }: GlobeMapProps) {
   }, [selectedId, places]);
 
   // Gira o globo até o local e marca a seleção. Usado pelo clique num
-  // marcador, pelas setas ←/→ e pelos nomes anterior/próximo nos cantos.
+  // marcador, pelas setas ←/→ e pelos nomes anterior/próximo nos cantos —
+  // sempre dentro da lista do nível atual (visiblePlaces).
   function focusPlace(place: PlaceAlbum) {
-    const newIndex = places.findIndex((item) => item.tag.id === place.tag.id);
-    const oldIndex = places.findIndex((item) => item.tag.id === selectedId);
+    const newIndex = visiblePlaces.findIndex(
+      (item) => item.tag.id === place.tag.id,
+    );
+    const oldIndex = visiblePlaces.findIndex(
+      (item) => item.tag.id === selectedId,
+    );
     if (newIndex !== -1 && oldIndex !== -1 && newIndex !== oldIndex) {
       // Sentido do caminho mais curto no círculo de locais — assim um clique
       // direto num marcador (não só nas setas) também desliza pro lado certo.
-      const forward = (newIndex - oldIndex + places.length) % places.length;
-      const backward = (oldIndex - newIndex + places.length) % places.length;
+      const forward =
+        (newIndex - oldIndex + visiblePlaces.length) % visiblePlaces.length;
+      const backward =
+        (oldIndex - newIndex + visiblePlaces.length) % visiblePlaces.length;
       slideDirectionRef.current = forward <= backward ? 1 : -1;
     }
     setSelectedId(place.tag.id);
@@ -305,22 +352,58 @@ export function GlobeMap({ places }: GlobeMapProps) {
   // pelas setas do nome em destaque, já que não há mais um carrossel visual
   // de onde tirar o índice atual.
   function focusPlaceByOffset(offset: number) {
-    if (places.length === 0) return;
-    const currentIndex = places.findIndex(
+    if (visiblePlaces.length === 0) return;
+    const currentIndex = visiblePlaces.findIndex(
       (place) => place.tag.id === selectedId,
     );
     const baseIndex = currentIndex === -1 ? 0 : currentIndex;
-    const nextIndex = (baseIndex + offset + places.length) % places.length;
-    focusPlace(places[nextIndex]);
+    const nextIndex =
+      (baseIndex + offset + visiblePlaces.length) % visiblePlaces.length;
+    focusPlace(visiblePlaces[nextIndex]);
   }
 
-  // Seleciona o primeiro local assim que a lista chega — antes disso não há
-  // local em foco.
+  // Botão "Ver cidades" (só no nível de país, só se o país tiver cidades):
+  // troca de lista, zoom pra dentro, foca a primeira cidade. Não reusa
+  // focusPlace porque o sentido do slide não faz sentido entre listas
+  // diferentes (países -> cidades) — é sempre da direita pra esquerda.
+  function enterCityLevel(country: PlaceAlbum) {
+    const cities = places.filter(
+      (place) => place.tag.parentId === country.tag.id,
+    );
+    if (cities.length === 0) return;
+
+    slideDirectionRef.current = 1;
+    setLevel("city");
+    setFocusedCountryId(country.tag.id);
+    setSelectedId(cities[0].tag.id);
+    const [phi, theta] = locationToAngles(cities[0].tag.lat, cities[0].tag.lon);
+    targetRef.current = { phi, theta };
+    targetScaleRef.current = CITY_ZOOM_SCALE;
+  }
+
+  // Botão "Voltar": desfaz o zoom e devolve o foco pro país de onde saiu.
+  function exitToCountryLevel() {
+    const country = places.find((place) => place.tag.id === focusedCountryId);
+
+    slideDirectionRef.current = -1;
+    setLevel("country");
+    setFocusedCountryId(null);
+    targetScaleRef.current = COUNTRY_ZOOM_SCALE;
+
+    if (country) {
+      setSelectedId(country.tag.id);
+      const [phi, theta] = locationToAngles(country.tag.lat, country.tag.lon);
+      targetRef.current = { phi, theta };
+    }
+  }
+
+  // Seleciona o primeiro local assim que a lista do nível atual chega — antes
+  // disso não há local em foco.
   useEffect(() => {
-    if (places.length === 0 || selectedId !== null) return;
-    focusPlace(places[0]);
+    if (visiblePlaces.length === 0 || selectedId !== null) return;
+    focusPlace(visiblePlaces[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só roda na chegada da lista, focusPlace não precisa disparar de novo
-  }, [places]);
+  }, [visiblePlaces]);
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
     pointerRef.current = { down: true, x: event.clientX, y: event.clientY };
@@ -348,7 +431,13 @@ export function GlobeMap({ places }: GlobeMapProps) {
 
   const activePlace =
     places.find((place) => place.tag.id === selectedId) ?? null;
-  const activeIndex = places.findIndex((place) => place.tag.id === selectedId);
+  const activeHasCities =
+    level === "country" &&
+    activePlace != null &&
+    places.some((place) => place.tag.parentId === activePlace.tag.id);
+  const activeIndex = visiblePlaces.findIndex(
+    (place) => place.tag.id === selectedId,
+  );
   const baseIndex = activeIndex === -1 ? 0 : activeIndex;
 
   // Janela de 3 slots do trilho (-1 anterior, 0 atual, 1 próximo). Com 1 ou 2
@@ -359,24 +448,34 @@ export function GlobeMap({ places }: GlobeMapProps) {
   // esquerda e com opacidade reduzida (estilo dos slots não-centrais).
   const slotOffsetByPlaceId = new Map<number, number>();
   for (const offset of [0, -1, 1]) {
-    const place = places[(baseIndex + offset + places.length) % places.length];
+    const place =
+      visiblePlaces[
+        (baseIndex + offset + visiblePlaces.length) % visiblePlaces.length
+      ];
     if (!slotOffsetByPlaceId.has(place.tag.id)) {
       slotOffsetByPlaceId.set(place.tag.id, offset);
     }
   }
   const trackSlots =
-    places.length === 0
+    visiblePlaces.length === 0
       ? []
       : [-1, 0, 1]
           .map((offset) => ({
             offset,
-            place: places[(baseIndex + offset + places.length) % places.length],
+            place:
+              visiblePlaces[
+                (baseIndex + offset + visiblePlaces.length) %
+                  visiblePlaces.length
+              ],
           }))
-          .filter(({ offset, place }) => slotOffsetByPlaceId.get(place.tag.id) === offset);
+          .filter(
+            ({ offset, place }) =>
+              slotOffsetByPlaceId.get(place.tag.id) === offset,
+          );
 
   return (
     <div className="flex h-[100svh] flex-col">
-      {places.length === 0 ? (
+      {visiblePlaces.length === 0 ? (
         <p className="flex-1 p-8 text-center font-mono text-xs uppercase tracking-widest text-muted">
           nenhum local com coordenadas ainda
         </p>
@@ -434,7 +533,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
                 style={{ width: "100%", height: "100%" }}
               />
 
-              {places.map((place) => {
+              {visiblePlaces.map((place) => {
                 const id = markerId(place.tag.id);
                 const isSelected = selectedId === place.tag.id;
                 const style: AnchorStyle = {
@@ -491,9 +590,9 @@ export function GlobeMap({ places }: GlobeMapProps) {
             </button>
 
             {activePlace && (
-              <div className="absolute bottom-8 z-10 flex justify-center sm:bottom-12">
+              <div className="absolute bottom-8 z-10 flex justify-center gap-3 sm:bottom-12">
                 <Link
-                  href={`/mapa/${encodeURIComponent(activePlace.tag.name)}`}
+                  href={mapaHref(activePlace, places)}
                   onClick={(event) => {
                     if (
                       event.metaKey ||
@@ -504,14 +603,32 @@ export function GlobeMap({ places }: GlobeMapProps) {
                       return;
                     }
                     event.preventDefault();
-                    triggerZoomTransition(
-                      `/mapa/${encodeURIComponent(activePlace.tag.name)}`,
-                    );
+                    triggerZoomTransition(mapaHref(activePlace, places));
                   }}
                   className="rounded-full border border-accent bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:bg-accent hover:text-background"
                 >
                   Explorar
                 </Link>
+
+                {level === "country" && activeHasCities && (
+                  <button
+                    type="button"
+                    onClick={() => enterCityLevel(activePlace)}
+                    className="rounded-full border border-accent/30 bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:border-accent hover:bg-accent hover:text-background"
+                  >
+                    Ver cidades
+                  </button>
+                )}
+
+                {level === "city" && (
+                  <button
+                    type="button"
+                    onClick={exitToCountryLevel}
+                    className="rounded-full border border-accent/30 bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:border-accent hover:bg-accent hover:text-background"
+                  >
+                    Voltar
+                  </button>
+                )}
               </div>
             )}
           </div>

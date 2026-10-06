@@ -192,11 +192,14 @@ export function SiteNav() {
     ? decodeURIComponent(pathname.slice("/cor/".length).split("/")[0])
     : null;
 
-  // Mesma ideia em /mapa/<nome>: o item "mapa" mostra o nome do local em
-  // foco, com um MapPin à esquerda pra deixar claro que é um local (o "cor"
+  // Mesma ideia em /mapa/<pais> ou /mapa/<pais>/<cidade>: o item "mapa" mostra
+  // o nome do local mais específico em foco (cidade quando tiver, senão
+  // país), com um MapPin à esquerda pra deixar claro que é um local (o "cor"
   // não precisa de ícone porque o próprio texto já é inequívoco).
   const mapaName = pathname.startsWith("/mapa/")
-    ? decodeURIComponent(pathname.slice("/mapa/".length).split("/")[0])
+    ? decodeURIComponent(
+        pathname.slice("/mapa/".length).split("/").filter(Boolean).pop() ?? "",
+      )
     : null;
 
   return (
