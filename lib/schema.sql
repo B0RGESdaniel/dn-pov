@@ -26,6 +26,10 @@ CREATE TABLE tags (
   CHECK (category = 'place' OR parent_id IS NULL)
 );
 
+-- UNIQUE(name, category, parent_id) não pega duplicata de país (parent_id NULL,
+-- e NULL nunca é igual a NULL numa constraint de unicidade) — índice parcial cobre esse caso.
+CREATE UNIQUE INDEX idx_tags_unique_root ON tags(name, category) WHERE parent_id IS NULL;
+
 CREATE TABLE photo_tags (
   photo_id INTEGER NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
   tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,

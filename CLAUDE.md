@@ -49,6 +49,10 @@ CREATE TABLE tags (
   UNIQUE (name, category, parent_id)
 );
 
+-- parent_id NULL nunca é "igual" a si mesmo numa UNIQUE normal — índice parcial
+-- extra garante que não haja dois países com o mesmo nome:
+-- CREATE UNIQUE INDEX idx_tags_unique_root ON tags(name, category) WHERE parent_id IS NULL;
+
 CREATE TABLE photo_tags (
   photo_id INTEGER REFERENCES photos(id),
   tag_id INTEGER REFERENCES tags(id),

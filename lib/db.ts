@@ -22,6 +22,7 @@ interface GetPhotosProps {
 export interface NewTagInput {
   name: string;
   category: TagCategory;
+  parentId?: number | null; // só em "place": cidade -> país
   lat?: number | null;
   lon?: number | null;
   colorBg?: string | null;
@@ -33,6 +34,7 @@ function rowToTag(row: Record<string, unknown>): Tag {
     id: row.id as number,
     name: row.name as string,
     category: row.category as TagCategory,
+    parentId: row.parent_id as number | null,
     lat: row.lat as number | null,
     lon: row.lon as number | null,
     colorBg: row.color_bg as string | null,
@@ -40,32 +42,64 @@ function rowToTag(row: Record<string, unknown>): Tag {
   };
 }
 
+// Duas constraints de unicidade coexistem (ver lib/schema.sql): a de 3 colunas
+// (name, category, parent_id) cobre cidades (parent_id preenchido); um índice
+// parcial separado cobre países (parent_id NULL, que não se "autoconflita" numa
+// UNIQUE normal). Por isso não dá pra usar um único ON CONFLICT — resolvemos
+// com SELECT antes de decidir entre INSERT e UPDATE.
 export async function upsertTags(inputs: NewTagInput[]): Promise<Tag[]> {
   const tags: Tag[] = [];
 
   for (const input of inputs) {
-    await db.execute({
-      sql: `
-        INSERT INTO tags (name, category, lat, lon, color_bg, color_accent) VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(name, category) DO UPDATE SET
-          lat = COALESCE(excluded.lat, tags.lat),
-          lon = COALESCE(excluded.lon, tags.lon),
-          color_bg = COALESCE(excluded.color_bg, tags.color_bg),
-          color_accent = COALESCE(excluded.color_accent, tags.color_accent)
-      `,
-      args: [
-        input.name,
-        input.category,
-        input.lat ?? null,
-        input.lon ?? null,
-        input.colorBg ?? null,
-        input.colorAccent ?? null,
-      ],
+    const parentId = input.parentId ?? null;
+    const whereParent = parentId == null ? "parent_id IS NULL" : "parent_id = ?";
+    const whereArgs =
+      parentId == null ? [input.name, input.category] : [input.name, input.category, parentId];
+
+    const existing = await db.execute({
+      sql: `SELECT id FROM tags WHERE name = ? AND category = ? AND ${whereParent}`,
+      args: whereArgs,
     });
 
+    if (existing.rows.length > 0) {
+      await db.execute({
+        sql: `
+          UPDATE tags SET
+            lat = COALESCE(?, lat),
+            lon = COALESCE(?, lon),
+            color_bg = COALESCE(?, color_bg),
+            color_accent = COALESCE(?, color_accent)
+          WHERE id = ?
+        `,
+        args: [
+          input.lat ?? null,
+          input.lon ?? null,
+          input.colorBg ?? null,
+          input.colorAccent ?? null,
+          existing.rows[0].id,
+        ],
+      });
+    } else {
+      await db.execute({
+        sql: `
+          INSERT INTO tags (name, category, parent_id, lat, lon, color_bg, color_accent)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+        args: [
+          input.name,
+          input.category,
+          parentId,
+          input.lat ?? null,
+          input.lon ?? null,
+          input.colorBg ?? null,
+          input.colorAccent ?? null,
+        ],
+      });
+    }
+
     const result = await db.execute({
-      sql: `SELECT id, name, category, lat, lon, color_bg, color_accent FROM tags WHERE name = ? AND category = ?`,
-      args: [input.name, input.category],
+      sql: `SELECT id, name, category, parent_id, lat, lon, color_bg, color_accent FROM tags WHERE name = ? AND category = ? AND ${whereParent}`,
+      args: whereArgs,
     });
 
     tags.push(rowToTag(result.rows[0] as unknown as Record<string, unknown>));
@@ -142,7 +176,7 @@ export interface PlaceAlbum {
 
 export async function getPlaces(): Promise<PlaceAlbum[]> {
   const tagsResult = await db.execute(`
-    SELECT t.id, t.name, t.category, t.lat, t.lon, t.color_bg, t.color_accent, COUNT(pt.photo_id) as count
+    SELECT t.id, t.name, t.category, t.parent_id, t.lat, t.lon, t.color_bg, t.color_accent, COUNT(pt.photo_id) as count
     FROM tags t
     JOIN photo_tags pt ON pt.tag_id = t.id
     WHERE t.category = 'place' AND t.lat IS NOT NULL AND t.lon IS NOT NULL
@@ -173,7 +207,7 @@ export interface ColorAlbum {
 
 export async function getColors(): Promise<ColorAlbum[]> {
   const tagsResult = await db.execute(`
-    SELECT t.id, t.name, t.category, t.lat, t.lon, t.color_bg, t.color_accent, COUNT(pt.photo_id) as count
+    SELECT t.id, t.name, t.category, t.parent_id, t.lat, t.lon, t.color_bg, t.color_accent, COUNT(pt.photo_id) as count
     FROM tags t
     JOIN photo_tags pt ON pt.tag_id = t.id
     WHERE t.category = 'color' AND t.color_bg IS NOT NULL AND t.color_accent IS NOT NULL
@@ -194,7 +228,7 @@ export async function getColors(): Promise<ColorAlbum[]> {
 
 export async function getTags(): Promise<Tag[]> {
   const result = await db.execute(
-    `SELECT id, name, category, lat, lon, color_bg, color_accent FROM tags ORDER BY category, name`,
+    `SELECT id, name, category, parent_id, lat, lon, color_bg, color_accent FROM tags ORDER BY category, name`,
   );
 
   return result.rows.map((row) =>
@@ -208,7 +242,7 @@ export interface TagWithUsage extends Tag {
 
 export async function getTagsWithUsage(): Promise<TagWithUsage[]> {
   const result = await db.execute(`
-    SELECT t.id, t.name, t.category, t.lat, t.lon, t.color_bg, t.color_accent,
+    SELECT t.id, t.name, t.category, t.parent_id, t.lat, t.lon, t.color_bg, t.color_accent,
            COUNT(pt.photo_id) as photo_count
     FROM tags t
     LEFT JOIN photo_tags pt ON pt.tag_id = t.id
@@ -225,20 +259,33 @@ export async function getTagsWithUsage(): Promise<TagWithUsage[]> {
 export interface UpdateTagInput {
   id: number;
   name: string;
+  parentId?: number | null; // omitido = mantém o pai atual; só faz sentido em "place"
   lat?: number | null;
   lon?: number | null;
   colorBg?: string | null;
   colorAccent?: string | null;
 }
 
+// Trocar o país de uma cidade precisa re-linkar photo_tags: as fotos dessa
+// cidade estão linkadas também na tag do país antigo (ver scripts/upload.ts),
+// então o link velho sai e o novo entra — só pras fotos dessa cidade
+// específica, nunca pras fotos de outras cidades que continuam no país antigo.
 export async function updateTagById(input: UpdateTagInput): Promise<void> {
+  const current = await db.execute({
+    sql: `SELECT parent_id FROM tags WHERE id = ?`,
+    args: [input.id],
+  });
+  const oldParentId = (current.rows[0]?.parent_id ?? null) as number | null;
+  const newParentId = input.parentId === undefined ? oldParentId : input.parentId;
+
   await db.execute({
     sql: `
-      UPDATE tags SET name = ?, lat = ?, lon = ?, color_bg = ?, color_accent = ?
+      UPDATE tags SET name = ?, parent_id = ?, lat = ?, lon = ?, color_bg = ?, color_accent = ?
       WHERE id = ?
     `,
     args: [
       input.name,
+      newParentId,
       input.lat ?? null,
       input.lon ?? null,
       input.colorBg ?? null,
@@ -246,9 +293,43 @@ export async function updateTagById(input: UpdateTagInput): Promise<void> {
       input.id,
     ],
   });
+
+  if (newParentId === oldParentId) return;
+
+  const linkedPhotos = await db.execute({
+    sql: `SELECT photo_id FROM photo_tags WHERE tag_id = ?`,
+    args: [input.id],
+  });
+  const photoIds = linkedPhotos.rows.map((row) => row.photo_id as number);
+  if (photoIds.length === 0) return;
+
+  const placeholders = photoIds.map(() => "?").join(", ");
+
+  if (oldParentId != null) {
+    await db.execute({
+      sql: `DELETE FROM photo_tags WHERE tag_id = ? AND photo_id IN (${placeholders})`,
+      args: [oldParentId, ...photoIds],
+    });
+  }
+  if (newParentId != null) {
+    for (const photoId of photoIds) {
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO photo_tags (photo_id, tag_id) VALUES (?, ?)`,
+        args: [photoId, newParentId],
+      });
+    }
+  }
 }
 
 export async function deleteTag(id: number): Promise<void> {
+  const children = await db.execute({
+    sql: `SELECT COUNT(*) as c FROM tags WHERE parent_id = ?`,
+    args: [id],
+  });
+  if (Number(children.rows[0].c) > 0) {
+    throw new Error("Esse local tem cidades vinculadas — mova ou exclua elas primeiro.");
+  }
+
   await db.batch([
     { sql: `DELETE FROM photo_tags WHERE tag_id = ?`, args: [id] },
     { sql: `DELETE FROM tags WHERE id = ?`, args: [id] },

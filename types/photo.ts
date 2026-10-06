@@ -22,6 +22,7 @@ export type Tag = {
   id: number;
   name: string;
   category: TagCategory;
+  parentId: number | null; // só em category "place": cidade -> país; NULL = é o país
   lat: number | null;
   lon: number | null;
   colorBg: string | null;

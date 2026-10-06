@@ -55,7 +55,7 @@ function buildMockState(): { photos: Photo[]; tags: Tag[] } {
     const key = `${category}:${name}`;
     const existing = tagsByKey.get(key);
     if (existing) return existing;
-    const tag: Tag = { id: nextTagId++, name, category, lat, lon, colorBg, colorAccent };
+    const tag: Tag = { id: nextTagId++, name, category, parentId: null, lat, lon, colorBg, colorAccent };
     tagsByKey.set(key, tag);
     return tag;
   }
