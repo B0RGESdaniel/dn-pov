@@ -223,7 +223,6 @@ for (const file of imageFiles) {
     blurDataUrl,
     width,
     height,
-    takenAt: null,
     edited,
     memory,
   });

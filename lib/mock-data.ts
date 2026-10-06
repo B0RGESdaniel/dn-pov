@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Photo, PhotosPage, Tag, TagCategory } from "@/types/photo";
 import { Album, ColorAlbum, CoverPhoto, PlaceAlbum } from "@/lib/db";
-import { decodePhotoCursor, effectiveTakenAt, encodePhotoCursor } from "@/lib/photo-cursor";
+import { decodePhotoCursor, encodePhotoCursor } from "@/lib/photo-cursor";
 
 // Fonte de dados 100% local pra testar as páginas sem gastar Turso/R2.
 // Lê fotos/info.json (fora do repo, ver .gitignore) e serve as imagens via
@@ -23,7 +23,6 @@ interface MockManifestEntry {
   colors: (string | { name: string; colorBg?: string; colorAccent?: string })[];
   edited: boolean;
   memory?: string;
-  taken_at?: string;
   width?: number;
   height?: number;
 }
@@ -33,11 +32,11 @@ function readManifest(): MockManifestEntry[] {
   return JSON.parse(raw);
 }
 
-// "17/10/2024" -> "2024-10-17" (ordena como string igual à coluna taken_at)
-function parseTakenAt(value: string | undefined): string | null {
-  if (!value) return null;
-  const [day, month, year] = value.split("/");
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+// Hash determinístico pra simular sort_key sem Math.random() — senão a ordem
+// mudaria a cada reload em dev, o que seria confuso pra testar paginação.
+function mockSortKey(id: number): number {
+  const x = Math.sin(id * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
 }
 
 function buildMockState(): { photos: Photo[]; tags: Tag[] } {
@@ -94,7 +93,6 @@ function buildMockState(): { photos: Photo[]; tags: Tag[] } {
       blurDataUrl: null,
       width: entry.width ?? null,
       height: entry.height ?? null,
-      takenAt: parseTakenAt(entry.taken_at),
       edited: entry.edited,
       memory: entry.memory ?? null,
       createdAt: new Date(0).toISOString(),
@@ -133,21 +131,21 @@ export function getMockPhotos({
     return check(place, "place") && check(color, "color");
   });
 
-  // Mesma ordem/cursor de lib/db.ts::getPhotos: mais recentes primeiro,
-  // (taken_at, id) como par de comparação — ver lib/photo-cursor.ts.
+  // Mesma ordem/cursor de lib/db.ts::getPhotos: (sort_key, id) como par de
+  // comparação — ver lib/photo-cursor.ts.
   const sorted = [...filtered].sort((a, b) => {
-    const aKey = effectiveTakenAt(a.takenAt);
-    const bKey = effectiveTakenAt(b.takenAt);
+    const aKey = mockSortKey(a.id);
+    const bKey = mockSortKey(b.id);
     if (aKey !== bKey) return aKey < bKey ? 1 : -1;
     return b.id - a.id;
   });
 
   const afterCursor = cursor
     ? (() => {
-        const { takenAt: cursorTakenAt, id: cursorId } = decodePhotoCursor(cursor);
+        const { sortKey: cursorSortKey, id: cursorId } = decodePhotoCursor(cursor);
         return sorted.filter((photo) => {
-          const key = effectiveTakenAt(photo.takenAt);
-          return key < cursorTakenAt || (key === cursorTakenAt && photo.id < cursorId);
+          const key = mockSortKey(photo.id);
+          return key < cursorSortKey || (key === cursorSortKey && photo.id < cursorId);
         });
       })()
     : sorted;
@@ -156,7 +154,7 @@ export function getMockPhotos({
   const lastPhoto = page[page.length - 1];
   const nextCursor =
     afterCursor.length > limit && lastPhoto
-      ? encodePhotoCursor(lastPhoto.takenAt, lastPhoto.id)
+      ? encodePhotoCursor(mockSortKey(lastPhoto.id), lastPhoto.id)
       : null;
 
   return { photos: page, nextCursor };
@@ -165,14 +163,7 @@ export function getMockPhotos({
 export function getMockMemories(): Photo[] {
   const { photos } = buildMockState();
 
-  return photos
-    .filter((photo) => photo.memory != null)
-    .sort((a, b) => {
-      const aKey = effectiveTakenAt(a.takenAt);
-      const bKey = effectiveTakenAt(b.takenAt);
-      if (aKey !== bKey) return aKey < bKey ? 1 : -1;
-      return b.id - a.id;
-    });
+  return photos.filter((photo) => photo.memory != null).sort((a, b) => b.id - a.id);
 }
 
 function getMockAlbums(): (Album & { covers: CoverPhoto[] })[] {

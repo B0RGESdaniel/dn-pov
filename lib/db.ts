@@ -1,10 +1,6 @@
 import { createClient } from "@libsql/client";
 import { NewPhoto, Photo, PhotosPage, Tag, TagCategory } from "@/types/photo";
-import {
-  decodePhotoCursor,
-  encodePhotoCursor,
-  NULL_DATE_SENTINEL,
-} from "@/lib/photo-cursor";
+import { decodePhotoCursor, encodePhotoCursor } from "@/lib/photo-cursor";
 
 export const db = createClient({
   url: process.env.TURSO_DATABASE_URL!,
@@ -262,7 +258,7 @@ export async function deleteTag(id: number): Promise<void> {
 export async function insertPhoto(data: NewPhoto): Promise<number> {
   const result = await db.execute({
     sql: `
-      INSERT INTO photos (url, thumb_url, blur_data_url, width, height, taken_at, edited, memory) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO photos (url, thumb_url, blur_data_url, width, height, edited, memory, sort_key) VALUES (?, ?, ?, ?, ?, ?, ?, RANDOM())
     `,
     args: [
       data.url,
@@ -270,7 +266,6 @@ export async function insertPhoto(data: NewPhoto): Promise<number> {
       data.blurDataUrl,
       data.width,
       data.height,
-      data.takenAt,
       data.edited ? 1 : 0,
       data.memory,
     ],
@@ -296,7 +291,6 @@ function rowToPhoto(row: Record<string, unknown>): Photo {
     blurDataUrl: row.blur_data_url as string | null,
     width: row.width as number | null,
     height: row.height as number | null,
-    takenAt: row.taken_at as string | null,
     edited: Boolean(row.edited),
     memory: row.memory as string | null,
     createdAt: row.created_at as string,
@@ -381,7 +375,7 @@ export async function getMemories(): Promise<Photo[]> {
   const result = await db.execute(`
     SELECT photos.* FROM photos
     WHERE memory IS NOT NULL
-    ORDER BY COALESCE(photos.taken_at, '${NULL_DATE_SENTINEL}') DESC, photos.id DESC
+    ORDER BY photos.id DESC
   `);
 
   const photos = result.rows.map((row) =>
@@ -419,11 +413,9 @@ export async function getPhotos({
   const args: (string | number)[] = [];
 
   if (cursor) {
-    const { takenAt: cursorTakenAt, id: cursorId } = decodePhotoCursor(cursor);
-    conditions.push(
-      `(COALESCE(photos.taken_at, '${NULL_DATE_SENTINEL}'), photos.id) < (?, ?)`,
-    );
-    args.push(cursorTakenAt, cursorId);
+    const { sortKey: cursorSortKey, id: cursorId } = decodePhotoCursor(cursor);
+    conditions.push(`(photos.sort_key, photos.id) < (?, ?)`);
+    args.push(cursorSortKey, cursorId);
   }
 
   const categoryFilters: [TagCategory, string[] | undefined][] = [
@@ -447,21 +439,22 @@ export async function getPhotos({
   const sql = `
     SELECT photos.* FROM photos
     ${whereClause}
-    ORDER BY COALESCE(photos.taken_at, '${NULL_DATE_SENTINEL}') DESC, photos.id DESC
+    ORDER BY photos.sort_key DESC, photos.id DESC
     LIMIT ?
   `;
 
   const result = await db.execute({ sql, args });
 
   const hasNextPage = result.rows.length > limit;
+  const pageRows = result.rows.slice(0, limit);
 
-  const photos: Photo[] = result.rows
-    .slice(0, limit)
-    .map((row) => rowToPhoto(row as unknown as Record<string, unknown>));
+  const photos: Photo[] = pageRows.map((row) =>
+    rowToPhoto(row as unknown as Record<string, unknown>),
+  );
 
-  const lastPhoto = photos[photos.length - 1];
+  const lastRow = pageRows[pageRows.length - 1] as unknown as Record<string, unknown>;
   const nextCursor = hasNextPage
-    ? encodePhotoCursor(lastPhoto.takenAt, lastPhoto.id)
+    ? encodePhotoCursor(lastRow.sort_key as number, lastRow.id as number)
     : null;
 
   const photosWithTags = await attachTags(photos);

@@ -10,7 +10,6 @@ export type Photo = {
   blurDataUrl: string | null;
   width: number | null;
   height: number | null;
-  takenAt: string | null;
   edited: boolean;
   memory: string | null;
   createdAt: string;

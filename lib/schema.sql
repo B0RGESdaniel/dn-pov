@@ -5,11 +5,13 @@ CREATE TABLE photos (
   blur_data_url TEXT,
   width INTEGER,
   height INTEGER,
-  taken_at TEXT,
   edited INTEGER NOT NULL DEFAULT 0,
   memory TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  sort_key REAL  -- aleatório fixo por foto, atribuído no INSERT; define a ordem do feed principal
 );
+
+CREATE INDEX idx_photos_sort_key ON photos(sort_key, id);
 
 CREATE TABLE tags (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

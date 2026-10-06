@@ -31,10 +31,10 @@ CREATE TABLE photos (
   blur_data_url TEXT,         -- LQIP em base64 para placeholder
   width INTEGER,
   height INTEGER,
-  taken_at TEXT,
   edited INTEGER NOT NULL DEFAULT 0,   -- original (0) vs. editada (1)
   memory TEXT,         -- texto opcional; toda foto com memory != NULL entra na tela de Memórias
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  sort_key REAL        -- aleatório fixo, atribuído no INSERT; define a ordem do feed principal
 );
 
 CREATE TABLE tags (
