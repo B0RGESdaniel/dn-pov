@@ -32,6 +32,8 @@ export async function createTag(formData: FormData): Promise<TagActionResult> {
       {
         name,
         category,
+        // parentId só existe em "place" (país = null, cidade = id do país).
+        parentId: category === "place" ? parseOptionalNumber(formData.get("parentId")) : null,
         lat: parseOptionalNumber(formData.get("lat")),
         lon: parseOptionalNumber(formData.get("lon")),
         colorBg: parseOptionalString(formData.get("colorBg")),
@@ -53,10 +55,16 @@ export async function updateTag(
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { error: "Nome é obrigatório" };
 
+  // Campo ausente (tags de cor não mandam parentId) = mantém o pai atual;
+  // presente (mesmo vazio, caso do país) = usa o valor explicitamente.
+  const rawParentId = formData.get("parentId");
+  const parentId = rawParentId === null ? undefined : parseOptionalNumber(rawParentId);
+
   try {
     await updateTagById({
       id,
       name,
+      parentId,
       lat: parseOptionalNumber(formData.get("lat")),
       lon: parseOptionalNumber(formData.get("lon")),
       colorBg: parseOptionalString(formData.get("colorBg")),
@@ -73,8 +81,10 @@ export async function updateTag(
 export async function deleteTagAction(id: number): Promise<TagActionResult> {
   try {
     await deleteTagFromDb(id);
-  } catch {
-    return { error: "Não foi possível excluir a tag" };
+  } catch (error) {
+    // deleteTag lança uma mensagem já pensada pro usuário final (ex: país com
+    // cidades vinculadas) — propaga em vez de esconder atrás de um genérico.
+    return { error: error instanceof Error ? error.message : "Não foi possível excluir a tag" };
   }
 
   revalidatePath("/", "layout");

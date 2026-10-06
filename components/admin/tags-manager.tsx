@@ -1,7 +1,7 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
 import { ReactNode, useState, useTransition } from "react";
-import { TagCategory } from "@/types/photo";
 import { TagWithUsage } from "@/lib/db";
 import {
   createTag,
@@ -9,59 +9,20 @@ import {
   updateTag,
 } from "@/app/admin/(dashboard)/tags/actions";
 
-const CATEGORY_LABELS: Record<TagCategory, string> = {
-  place: "Local",
-  color: "Cor",
-};
-
-const CATEGORIES: TagCategory[] = ["place", "color"];
-
 export function TagsManager({ tags }: { tags: TagWithUsage[] }) {
   return (
     <div className="space-y-10">
-      {CATEGORIES.map((category) => (
-        <TagCategorySection
-          key={category}
-          category={category}
-          tags={tags.filter((tag) => tag.category === category)}
-        />
-      ))}
+      <PlaceTagsSection tags={tags.filter((tag) => tag.category === "place")} />
+      <ColorTagsSection tags={tags.filter((tag) => tag.category === "color")} />
     </div>
   );
 }
 
-function TagCategorySection({
-  category,
-  tags,
-}: {
-  category: TagCategory;
-  tags: TagWithUsage[];
-}) {
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  const [colorBg, setColorBg] = useState("");
-  const [colorAccent, setColorAccent] = useState("");
-
-  function handleCreate(formData: FormData) {
-    setError(null);
-    startTransition(async () => {
-      const result = await createTag(formData);
-      if (result?.error) {
-        setError(result.error);
-        return;
-      }
-      // Campos de texto/number resetam sozinhos (comportamento nativo do
-      // React 19 pra <form action={fn}> bem-sucedido) — mas isso só vale pra
-      // inputs não controlados. colorBg/colorAccent são controlados (pro
-      // preview de contraste reagir ao digitar), então precisam de reset manual.
-      setColorBg("");
-      setColorAccent("");
-    });
-  }
-
-  function handleDelete(tag: TagWithUsage) {
+function makeDeleteHandler(
+  startTransition: (callback: () => void | Promise<void>) => void,
+  setError: (error: string | null) => void,
+) {
+  return function handleDelete(tag: TagWithUsage) {
     const confirmed = window.confirm(
       tag.photoCount > 0
         ? `Excluir "${tag.name}"? ${tag.photoCount} foto(s) vão perder essa tag.`
@@ -74,25 +35,317 @@ function TagCategorySection({
       const result = await deleteTagAction(tag.id);
       if (result?.error) setError(result.error);
     });
+  };
+}
+
+// País -> cidades (parent_id). Expande/colapsa por país; "+ Nova cidade" vive
+// dentro do grupo certo, "+ Novo país" é o único nível de topo.
+function PlaceTagsSection({ tags }: { tags: TagWithUsage[] }) {
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [creatingCityFor, setCreatingCityFor] = useState<number | null>(null);
+  const [creatingCountry, setCreatingCountry] = useState(false);
+  const handleDelete = makeDeleteHandler(startTransition, setError);
+
+  const countries = tags.filter((tag) => tag.parentId === null);
+  const citiesByCountry = new Map<number, TagWithUsage[]>();
+  for (const tag of tags) {
+    if (tag.parentId == null) continue;
+    const list = citiesByCountry.get(tag.parentId) ?? [];
+    list.push(tag);
+    citiesByCountry.set(tag.parentId, list);
+  }
+
+  function toggleExpand(id: number) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   return (
     <section>
-      <h2 className="mb-3 font-display text-sm uppercase tracking-wide text-muted">
-        {CATEGORY_LABELS[category]}
-      </h2>
+      <h2 className="mb-3 font-display text-sm uppercase tracking-wide text-muted">Local</h2>
 
       <ul className="mb-4 space-y-2">
-        {tags.length === 0 && (
-          <li className="text-sm text-muted">Nenhuma tag ainda.</li>
+        {countries.length === 0 && (
+          <li className="text-sm text-muted">Nenhum país ainda.</li>
         )}
+
+        {countries.map((country) => {
+          const cities = citiesByCountry.get(country.id) ?? [];
+          const isExpanded = expanded.has(country.id);
+
+          return (
+            <li key={country.id} className="rounded-md border border-border bg-surface">
+              {editingId === country.id ? (
+                <div className="p-2">
+                  <PlaceTagForm
+                    tag={country}
+                    level="country"
+                    countries={countries}
+                    onDone={() => setEditingId(null)}
+                    onError={setError}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(country.id)}
+                    className="flex items-center gap-2 text-left"
+                  >
+                    <ChevronRight
+                      className={`h-4 w-4 shrink-0 text-muted transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                    />
+                    <ColorDots tag={country} />
+                    <span className="text-foreground">{country.name}</span>
+                    <span className="text-xs text-muted">
+                      {country.photoCount} foto(s) · {cities.length} cidade(s)
+                    </span>
+                  </button>
+
+                  <div className="flex gap-3 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(country.id)}
+                      className="text-muted hover:text-foreground"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(country)}
+                      disabled={isPending}
+                      className="text-muted hover:text-red-400 disabled:opacity-60"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isExpanded && (
+                <ul className="space-y-2 border-t border-border p-2 pl-6">
+                  {cities.length === 0 && creatingCityFor !== country.id && (
+                    <li className="text-sm text-muted">Nenhuma cidade ainda.</li>
+                  )}
+
+                  {cities.map((city) =>
+                    editingId === city.id ? (
+                      <li key={city.id}>
+                        <PlaceTagForm
+                          tag={city}
+                          level="city"
+                          countries={countries}
+                          onDone={() => setEditingId(null)}
+                          onError={setError}
+                        />
+                      </li>
+                    ) : (
+                      <li
+                        key={city.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
+                      >
+                        <div className="flex items-center gap-3">
+                          <ColorDots tag={city} />
+                          <span className="text-foreground">{city.name}</span>
+                          <span className="text-xs text-muted">{city.photoCount} foto(s)</span>
+                        </div>
+                        <div className="flex gap-3 text-sm">
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(city.id)}
+                            className="text-muted hover:text-foreground"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(city)}
+                            disabled={isPending}
+                            className="text-muted hover:text-red-400 disabled:opacity-60"
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </li>
+                    ),
+                  )}
+
+                  {creatingCityFor === country.id ? (
+                    <li>
+                      <PlaceTagForm
+                        level="city"
+                        countries={countries}
+                        defaultCountryId={country.id}
+                        onDone={() => setCreatingCityFor(null)}
+                        onError={setError}
+                      />
+                    </li>
+                  ) : (
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => setCreatingCityFor(country.id)}
+                        className="text-sm text-muted hover:text-foreground"
+                      >
+                        + Nova cidade
+                      </button>
+                    </li>
+                  )}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      {creatingCountry ? (
+        <PlaceTagForm
+          level="country"
+          countries={countries}
+          onDone={() => setCreatingCountry(false)}
+          onError={setError}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setCreatingCountry(true)}
+          className="h-9 rounded-md bg-accent px-3 text-sm font-medium text-background"
+        >
+          + Novo país
+        </button>
+      )}
+
+      {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+    </section>
+  );
+}
+
+// Formulário único pra país e cidade — só a cidade mostra o seletor de país
+// (reatribuir move a cidade, ver updateTagById em lib/db.ts).
+function PlaceTagForm({
+  tag,
+  level,
+  countries,
+  defaultCountryId,
+  onDone,
+  onError,
+}: {
+  tag?: TagWithUsage;
+  level: "country" | "city";
+  countries: TagWithUsage[];
+  defaultCountryId?: number;
+  onDone: () => void;
+  onError: (error: string | null) => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [colorBg, setColorBg] = useState(tag?.colorBg ?? "");
+  const [colorAccent, setColorAccent] = useState(tag?.colorAccent ?? "");
+
+  function handleSubmit(formData: FormData) {
+    onError(null);
+    startTransition(async () => {
+      const result = tag ? await updateTag(tag.id, formData) : await createTag(formData);
+      if (result?.error) {
+        onError(result.error);
+        return;
+      }
+      onDone();
+    });
+  }
+
+  return (
+    <form action={handleSubmit} className="flex flex-wrap items-end gap-2">
+      {!tag && <input type="hidden" name="category" value="place" />}
+
+      {level === "city" ? (
+        <label className="flex flex-col gap-1 text-xs text-muted">
+          País
+          <select
+            name="parentId"
+            required
+            defaultValue={tag?.parentId ?? defaultCountryId}
+            className="h-9 w-32 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:border-accent"
+          >
+            {countries.map((country) => (
+              <option key={country.id} value={country.id}>
+                {country.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        // País nunca tem pai — explícito (string vazia = NULL pro parseOptionalNumber).
+        <input type="hidden" name="parentId" value="" />
+      )}
+
+      <Field label="Nome" name="name" defaultValue={tag?.name} required />
+      <Field label="Lat" name="lat" type="number" step="any" defaultValue={tag?.lat ?? ""} />
+      <Field label="Lon" name="lon" type="number" step="any" defaultValue={tag?.lon ?? ""} />
+      <ColorField label="Cor fundo" name="colorBg" value={colorBg} onChange={setColorBg} />
+      <ColorField label="Cor accent" name="colorAccent" value={colorAccent} onChange={setColorAccent} />
+      <ContrastPreview bg={colorBg} accent={colorAccent} />
+
+      <button
+        type="submit"
+        disabled={isPending}
+        className="h-9 rounded-md bg-accent px-3 text-sm font-medium text-background disabled:opacity-60"
+      >
+        {tag ? "Salvar" : "Adicionar"}
+      </button>
+      <button
+        type="button"
+        onClick={onDone}
+        className="h-9 rounded-md border border-border px-3 text-sm text-muted"
+      >
+        Cancelar
+      </button>
+    </form>
+  );
+}
+
+// Tags de cor não têm hierarquia — continua uma lista flat, igual sempre foi.
+function ColorTagsSection({ tags }: { tags: TagWithUsage[] }) {
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [colorBg, setColorBg] = useState("");
+  const [colorAccent, setColorAccent] = useState("");
+  const handleDelete = makeDeleteHandler(startTransition, setError);
+
+  function handleCreate(formData: FormData) {
+    setError(null);
+    startTransition(async () => {
+      const result = await createTag(formData);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+      // colorBg/colorAccent são controlados (pro preview de contraste), então
+      // precisam de reset manual — os outros campos resetam sozinhos.
+      setColorBg("");
+      setColorAccent("");
+    });
+  }
+
+  return (
+    <section>
+      <h2 className="mb-3 font-display text-sm uppercase tracking-wide text-muted">Cor</h2>
+
+      <ul className="mb-4 space-y-2">
+        {tags.length === 0 && <li className="text-sm text-muted">Nenhuma tag ainda.</li>}
 
         {tags.map((tag) =>
           editingId === tag.id ? (
-            <TagEditRow
+            <ColorEditRow
               key={tag.id}
               tag={tag}
-              category={category}
               onDone={() => setEditingId(null)}
               onError={setError}
             />
@@ -102,28 +355,9 @@ function TagCategorySection({
               className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 py-2"
             >
               <div className="flex items-center gap-3">
-                {(tag.colorBg || tag.colorAccent) && (
-                  <span className="flex shrink-0 items-center gap-1">
-                    {tag.colorBg && (
-                      <span
-                        className="h-4 w-4 rounded-full border border-border"
-                        style={{ backgroundColor: tag.colorBg }}
-                        title="Cor fundo"
-                      />
-                    )}
-                    {tag.colorAccent && (
-                      <span
-                        className="h-4 w-4 rounded-full border border-border"
-                        style={{ backgroundColor: tag.colorAccent }}
-                        title="Cor accent"
-                      />
-                    )}
-                  </span>
-                )}
+                <ColorDots tag={tag} />
                 <span className="text-foreground">{tag.name}</span>
-                <span className="text-xs text-muted">
-                  {tag.photoCount} foto(s)
-                </span>
+                <span className="text-xs text-muted">{tag.photoCount} foto(s)</span>
               </div>
 
               <div className="flex gap-3 text-sm">
@@ -149,26 +383,10 @@ function TagCategorySection({
       </ul>
 
       <form action={handleCreate} className="flex flex-wrap items-end gap-2">
-        <input type="hidden" name="category" value={category} />
+        <input type="hidden" name="category" value="color" />
         <Field label="Nome" name="name" required />
-        {category === "place" && (
-          <>
-            <Field label="Lat" name="lat" type="number" step="any" />
-            <Field label="Lon" name="lon" type="number" step="any" />
-          </>
-        )}
-        <ColorField
-          label="Cor fundo"
-          name="colorBg"
-          value={colorBg}
-          onChange={setColorBg}
-        />
-        <ColorField
-          label="Cor accent"
-          name="colorAccent"
-          value={colorAccent}
-          onChange={setColorAccent}
-        />
+        <ColorField label="Cor fundo" name="colorBg" value={colorBg} onChange={setColorBg} />
+        <ColorField label="Cor accent" name="colorAccent" value={colorAccent} onChange={setColorAccent} />
         <ContrastPreview bg={colorBg} accent={colorAccent} />
         <button
           type="submit"
@@ -184,14 +402,12 @@ function TagCategorySection({
   );
 }
 
-function TagEditRow({
+function ColorEditRow({
   tag,
-  category,
   onDone,
   onError,
 }: {
   tag: TagWithUsage;
-  category: TagCategory;
   onDone: () => void;
   onError: (error: string | null) => void;
 }) {
@@ -215,36 +431,8 @@ function TagEditRow({
     <li className="rounded-md border border-border bg-surface px-3 py-2">
       <form action={handleSubmit} className="flex flex-wrap items-end gap-2">
         <Field label="Nome" name="name" defaultValue={tag.name} required />
-        {category === "place" && (
-          <>
-            <Field
-              label="Lat"
-              name="lat"
-              type="number"
-              step="any"
-              defaultValue={tag.lat ?? ""}
-            />
-            <Field
-              label="Lon"
-              name="lon"
-              type="number"
-              step="any"
-              defaultValue={tag.lon ?? ""}
-            />
-          </>
-        )}
-        <ColorField
-          label="Cor fundo"
-          name="colorBg"
-          value={colorBg}
-          onChange={setColorBg}
-        />
-        <ColorField
-          label="Cor accent"
-          name="colorAccent"
-          value={colorAccent}
-          onChange={setColorAccent}
-        />
+        <ColorField label="Cor fundo" name="colorBg" value={colorBg} onChange={setColorBg} />
+        <ColorField label="Cor accent" name="colorAccent" value={colorAccent} onChange={setColorAccent} />
         <ContrastPreview bg={colorBg} accent={colorAccent} />
         <button
           type="submit"
@@ -262,6 +450,28 @@ function TagEditRow({
         </button>
       </form>
     </li>
+  );
+}
+
+function ColorDots({ tag }: { tag: TagWithUsage }): ReactNode {
+  if (!tag.colorBg && !tag.colorAccent) return null;
+  return (
+    <span className="flex shrink-0 items-center gap-1">
+      {tag.colorBg && (
+        <span
+          className="h-4 w-4 rounded-full border border-border"
+          style={{ backgroundColor: tag.colorBg }}
+          title="Cor fundo"
+        />
+      )}
+      {tag.colorAccent && (
+        <span
+          className="h-4 w-4 rounded-full border border-border"
+          style={{ backgroundColor: tag.colorAccent }}
+          title="Cor accent"
+        />
+      )}
+    </span>
   );
 }
 
