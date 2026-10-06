@@ -65,21 +65,23 @@ Tags são livres dentro de cada categoria (sem lista fixa de locais/cores no có
 ## Fluxo de upload (CLI, roda fora da aplicação)
 
 ```
-node scripts/upload.ts ./fotos --place rio-de-janeiro --lat -22.9 --lon -43.2 --color azul --edited
+npm run upload -- ./fotos
 ```
 
-Flags, todas opcionais e manuais (sem geocoding/detecção automática):
+Processo interativo (`@clack/prompts`), sem flags — todos os campos abaixo são opcionais e manuais (sem geocoding/detecção automática):
 
-- `--place <nome>` — cria/atualiza uma tag de local; combine com `--lat`/`--lon` pra popular coordenadas (usadas na tela de Mapa)
-- `--color-bg <hex>` / `--color-accent <hex>` — as 2 cores do local (fundo + accent), usadas no tema dinâmico da tela de Mapa; só fazem sentido junto com `--place`
-- `--color <nome>` — tag de cor (lista livre)
-- `--edited` — marca as fotos do lote como editadas (padrão: original)
-- `--memory "texto"` — preenche a coluna `memory`; foto entra na tela de Memórias (`/memorias`)
+1. **País** — escolhe um já cadastrado ou cria um novo (nome + lat/lon + cor de fundo/accent do tema do Mapa); pode pular ("Nenhum")
+2. **Cidade** — só pergunta se um país foi escolhido; mesma lógica (escolher/criar/pular), mas a lista de cidades existentes é filtrada só pelas do país escolhido. A foto fica linkada em `photo_tags` na cidade **e** no país (quando os dois existem) — assim "Explorar" no país já mostra as fotos de todas as cidades dele, sem precisar resolver a hierarquia na hora de ler
+3. **Cores** — tags de cor livres: multiselect das existentes + texto livre pra criar novas
+4. **Editada?** — marca o lote como editado (padrão: original)
+5. **Memória** (opcional) — preenche a coluna `memory`; foto entra na tela de Memórias (`/memorias`)
 
-1. Lê as fotos de uma pasta local
-2. `sharp` gera 3 variantes por foto: thumbnail, medium (full) e um LQIP em base64 (blur placeholder)
-3. Sobe thumbnail + medium pro R2
-4. Insere/atualiza registro em `photos` no Turso + associa tags em `photo_tags` (criando tags novas em `tags` se necessário, com sua categoria)
+Depois de confirmado:
+
+1. Lê as fotos da pasta (`.jpg`, `.jpeg`, `.png`, `.webp`, `.heic`, `.heif`; extensões não reconhecidas são avisadas, não silenciadas) — HEIC é convertido pra JPEG via `sips` antes, porque o `libheif` do `sharp` não decodifica HEVC
+2. `sharp` gera 3 variantes por foto (thumbnail, medium/full, LQIP base64), aplicando a orientação do EXIF (`.rotate()`) antes de redimensionar
+3. Sobe thumbnail + medium pro R2 com chave única (`crypto.randomUUID()`, nunca o nome do arquivo — evita colisão/sobrescrita entre uploads)
+4. Insere o registro em `photos` no Turso (com `sort_key` aleatório) e associa as tags em `photo_tags`
 
 Nunca mexe no código do site nem exige redeploy. Não existe upload via web — decisão explícita pra manter `sharp` fora do runtime da aplicação.
 
@@ -92,7 +94,7 @@ Nunca mexe no código do site nem exige redeploy. Não existe upload via web —
 ## Front-end
 
 - `/` — grid responsivo (`grid-cols-2 md:grid-cols-3 lg:grid-cols-4`), infinite scroll consumindo a API paginada, chips de filtro agrupados por categoria refletidos na URL (compartilhável)
-- `/albuns` — cards agrupados por local/cor (contagem + capa reais via SQL), com abas Todos/Local/Cor; cada card linka pro `/` já filtrado
+- `/mapa` — globo 3D (`components/globe-map.tsx`, lib `cobe`). Abre mostrando só os países (tags `place` com `parent_id` nulo); botão **Ver cidades** dá zoom (`scale` do cobe) e troca os marcadores/carrossel pras cidades daquele país, **Voltar** desfaz; **Explorar** (nos dois níveis) leva pro feed filtrado por aquele local, em `/mapa/<pais>` ou `/mapa/<pais>/<cidade>` (rota aninhada — necessária porque cidades homônimas em países diferentes são permitidas)
 - `next/image` com `placeholder="blur"` usando o `blur_data_url` do banco
 - Lightbox própria (`components/lightbox.tsx`) ao clicar na foto — modal com navegação por seta/teclado (sem lib externa, sem transição de elemento compartilhado)
 - Nav global fixa (`components/site-nav.tsx`) com destaque da rota ativa
@@ -113,11 +115,12 @@ Nunca mexe no código do site nem exige redeploy. Não existe upload via web —
 4. ~~Tema visual (Tailwind v4 + fontes) migrado do protótipo~~
 5. ~~Grid + infinite scroll + blur placeholder (`/`)~~
 6. ~~Lightbox~~
-7. ~~Álbuns (`/albuns`)~~
-8. ~~Mapa (`/mapa`) — globo via lib `cobe`, pins a partir de tags de local com lat/lon; sem fotos fixas~~
+7. ~~Álbuns (`/albuns`)~~ — removido; local/cor já são navegáveis via `/mapa` e `/cor`, a tela ficava redundante
+8. ~~Mapa (`/mapa`) — globo via lib `cobe`, pins a partir de tags de local com lat/lon~~
 9. ~~Memórias (`/memorias`) — coluna `memory` em `photos`, card stack de polaroids~~
-10. Canvas arrastável/zoom no feed principal (substituindo o grid simples), se fizer sentido depois de usar o app
-11. Cache na edge / revalidação — parcialmente feito (`Cache-Control` na API); revisitar se cache mais agressivo compensar
+10. ~~Hierarquia país -> cidade no Mapa (`tags.parent_id`) — globo abre por país, zoom revela cidades~~
+11. Canvas arrastável/zoom no feed principal (substituindo o grid simples), se fizer sentido depois de usar o app
+12. Cache na edge / revalidação — parcialmente feito (`Cache-Control` na API); revisitar se cache mais agressivo compensar
 
 ## Divergências do protótipo (Claude Design)
 
@@ -125,5 +128,5 @@ Decisões tomadas ao migrar `dn-pov.dc.html` pra código real, pra não ficarem 
 
 - **Upload web fora de escopo**: o protótipo tem uma tela de Upload completa (drag-drop, autocomplete de local, cor "detectada"). Mantivemos upload só via CLI — construir upload web contradiria a decisão de manter `sharp` fora do runtime da aplicação.
 - **Feed simplificado**: o protótipo usa um canvas infinito arrastável com zoom e layout masonry calculado em JS (sem paginação). V1 usa o grid simples já documentado; o canvas fica como possível evolução futura (item 9 do roadmap).
-- **Mapa ainda não implementado**: o protótipo tem um globo 3D "fake" (continentes aproximados, sem geodata real) com locais fixos. Quando formos implementar, a ideia é usar a lib `cobe` (globo WebGL real) com overlay de fotos estilo polaroid, pins vindos de tags de local com lat/lon reais.
+- **Mapa com globo real e hierarquia**: o protótipo tem um globo 3D "fake" (continentes aproximados, sem geodata real) com locais fixos. Implementamos com a lib `cobe` (globo WebGL real), overlay de fotos estilo polaroid e pins vindos de tags de local com lat/lon reais — e, diferente do protótipo, com dois níveis (país → cidade, `tags.parent_id`), já que o volume de locais visitados cresce rápido demais pra uma lista flat continuar navegável.
 - **Taxonomia livre**: no protótipo, assunto e cor são listas fechadas (3 assuntos, 4 cores fixas). No app real são apenas tags normais com categoria — sem enum fixo no código.
