@@ -19,6 +19,15 @@ interface MockManifestEntry {
     lon: number;
     colorBg?: string;
     colorAccent?: string;
+    // Opcional — se ausente, a cidade fica sem país (igual hoje). Espelha o
+    // fluxo de 2 passos (país -> cidade) de scripts/upload.ts.
+    country?: {
+      name: string;
+      lat: number;
+      lon: number;
+      colorBg?: string;
+      colorAccent?: string;
+    };
   };
   colors: (string | { name: string; colorBg?: string; colorAccent?: string })[];
   edited: boolean;
@@ -44,38 +53,60 @@ function buildMockState(): { photos: Photo[]; tags: Tag[] } {
   const tagsByKey = new Map<string, Tag>();
   let nextTagId = 1;
 
+  // Chave inclui parentId pra permitir cidades homônimas em países diferentes
+  // (mesma regra do índice parcial em lib/schema.sql).
   function getOrCreateTag(
     name: string,
     category: TagCategory,
+    parentId: number | null,
     lat: number | null = null,
     lon: number | null = null,
     colorBg: string | null = null,
     colorAccent: string | null = null,
   ): Tag {
-    const key = `${category}:${name}`;
+    const key = `${category}:${parentId ?? "root"}:${name}`;
     const existing = tagsByKey.get(key);
     if (existing) return existing;
-    const tag: Tag = { id: nextTagId++, name, category, parentId: null, lat, lon, colorBg, colorAccent };
+    const tag: Tag = { id: nextTagId++, name, category, parentId, lat, lon, colorBg, colorAccent };
     tagsByKey.set(key, tag);
     return tag;
   }
 
   const photos: Photo[] = entries.map((entry, index) => {
+    const countryTag = entry.place.country
+      ? getOrCreateTag(
+          entry.place.country.name,
+          "place",
+          null,
+          entry.place.country.lat,
+          entry.place.country.lon,
+          entry.place.country.colorBg ?? null,
+          entry.place.country.colorAccent ?? null,
+        )
+      : null;
+
+    const placeTag = getOrCreateTag(
+      entry.place.name,
+      "place",
+      countryTag?.id ?? null,
+      entry.place.lat,
+      entry.place.lon,
+      entry.place.colorBg ?? null,
+      entry.place.colorAccent ?? null,
+    );
+
     const tags: Tag[] = [
-      getOrCreateTag(
-        entry.place.name,
-        "place",
-        entry.place.lat,
-        entry.place.lon,
-        entry.place.colorBg ?? null,
-        entry.place.colorAccent ?? null,
-      ),
+      placeTag,
+      // Mesma ideia do upload real (scripts/upload.ts): a foto fica linkada
+      // na cidade E no país, pra "Explorar" no país funcionar sem resolver filhos.
+      ...(countryTag ? [countryTag] : []),
       ...entry.colors.map((color) =>
         typeof color === "string"
-          ? getOrCreateTag(color, "color")
+          ? getOrCreateTag(color, "color", null)
           : getOrCreateTag(
               color.name,
               "color",
+              null,
               null,
               null,
               color.colorBg ?? null,
