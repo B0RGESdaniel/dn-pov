@@ -66,12 +66,16 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
           pointerStartRef.current = null;
         }}
       >
-        <div key={photo.id} className="lightbox-photo relative h-full w-full">
+        <div
+          key={photo.id}
+          className="lightbox-photo relative flex h-full w-full items-center justify-center"
+        >
           <Image
             src={photo.url}
             alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
-            fill
-            className="object-contain"
+            width={photo.width ?? 1600}
+            height={photo.height ?? 1600}
+            className="h-auto max-h-full w-auto max-w-full"
             sizes="100vw"
             placeholder={photo.blurDataUrl ? "blur" : undefined}
             blurDataURL={photo.blurDataUrl ?? undefined}
