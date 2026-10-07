@@ -3,7 +3,7 @@ import { getPhotos } from "@/lib/photos-source";
 
 // GET /api/photos?place=rio&color=azul&cursor=...
 // Cada categoria filtra por OR entre si; categorias diferentes se combinam por AND.
-// Paginação cursor-based (não offset). Filtro via JOIN/EXISTS no SQL (lib/db.ts), não em memória.
+// Paginação cursor-based (não offset). Filtro via JOIN/EXISTS no SQL (lib/db/photos.ts), não em memória.
 function parseList(value: string | null): string[] | undefined {
   if (!value) return undefined;
   return value.split(",").filter(Boolean);

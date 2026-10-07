@@ -15,7 +15,7 @@ function isUniqueViolation(error: unknown): boolean {
   );
 }
 
-// Traduz um erro vindo de lib/db.ts pra uma mensagem que faz sentido pro
+// Traduz um erro vindo de lib/db/ pra uma mensagem que faz sentido pro
 // usuário final do admin, sem expor código/mensagem interna do SQLite.
 export function mapDbError(error: unknown, context: DbErrorContext = "generic"): string {
   if (isUniqueViolation(error)) {

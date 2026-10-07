@@ -287,7 +287,8 @@ function PlaceTagForm({
           )}
         </label>
       ) : (
-        // País nunca tem pai — explícito (string vazia = NULL pro parseOptionalNumber).
+        // País nunca tem pai — string vazia (não ausência do campo) sinaliza
+        // "não é cidade" pro pickTagContext (lib/validation/tags.ts).
         <input type="hidden" name="parentId" value="" />
       )}
 
