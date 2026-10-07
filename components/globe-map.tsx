@@ -6,11 +6,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { PlaceAlbum } from "@/lib/db";
+import { PlaceTagGroup } from "@/lib/db";
 import { useZoomTransition } from "@/components/zoom-transition";
 
 interface GlobeMapProps {
-  places: PlaceAlbum[];
+  places: PlaceTagGroup[];
 }
 
 const DRAG_SENSITIVITY = 0.005;
@@ -66,7 +66,7 @@ function markerId(placeId: number): string {
 
 // País (parentId null) -> /mapa/<pais>; cidade -> /mapa/<pais>/<cidade> (rota
 // aninhada evita ambiguidade entre cidades homônimas em países diferentes).
-function mapaHref(place: PlaceAlbum, places: PlaceAlbum[]): string {
+function mapaHref(place: PlaceTagGroup, places: PlaceTagGroup[]): string {
   if (place.tag.parentId === null) {
     return `/mapa/${encodeURIComponent(place.tag.name)}`;
   }
@@ -327,7 +327,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
   // Gira o globo até o local e marca a seleção. Usado pelo clique num
   // marcador, pelas setas ←/→ e pelos nomes anterior/próximo nos cantos —
   // sempre dentro da lista do nível atual (visiblePlaces).
-  function focusPlace(place: PlaceAlbum) {
+  function focusPlace(place: PlaceTagGroup) {
     const newIndex = visiblePlaces.findIndex(
       (item) => item.tag.id === place.tag.id,
     );
@@ -366,7 +366,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
   // troca de lista, zoom pra dentro, foca a primeira cidade. Não reusa
   // focusPlace porque o sentido do slide não faz sentido entre listas
   // diferentes (países -> cidades) — é sempre da direita pra esquerda.
-  function enterCityLevel(country: PlaceAlbum) {
+  function enterCityLevel(country: PlaceTagGroup) {
     const cities = places.filter(
       (place) => place.tag.parentId === country.tag.id,
     );

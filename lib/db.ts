@@ -114,7 +114,7 @@ export interface CoverPhoto {
   blurDataUrl: string | null;
 }
 
-export interface Album {
+export interface TagGroup {
   tag: Tag;
   count: number;
   cover: CoverPhoto | null;
@@ -168,13 +168,13 @@ async function attachCovers<T extends { tag: Tag }>(
   }));
 }
 
-export interface PlaceAlbum {
+export interface PlaceTagGroup {
   tag: Tag & { lat: number; lon: number };
   count: number;
-  cover: Album["cover"];
+  cover: TagGroup["cover"];
 }
 
-export async function getPlaces(): Promise<PlaceAlbum[]> {
+export async function getPlaces(): Promise<PlaceTagGroup[]> {
   const tagsResult = await db.execute(`
     SELECT t.id, t.name, t.category, t.parent_id, t.lat, t.lon, t.color_bg, t.color_accent, COUNT(pt.photo_id) as count
     FROM tags t
@@ -199,13 +199,13 @@ export async function getPlaces(): Promise<PlaceAlbum[]> {
   }));
 }
 
-export interface ColorAlbum {
+export interface ColorTagGroup {
   tag: Tag & { colorBg: string; colorAccent: string };
   count: number;
   covers: CoverPhoto[];
 }
 
-export async function getColors(): Promise<ColorAlbum[]> {
+export async function getColors(): Promise<ColorTagGroup[]> {
   const tagsResult = await db.execute(`
     SELECT t.id, t.name, t.category, t.parent_id, t.lat, t.lon, t.color_bg, t.color_accent, COUNT(pt.photo_id) as count
     FROM tags t

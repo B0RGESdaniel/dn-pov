@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { ColorAlbum } from "@/lib/db";
+import { ColorTagGroup } from "@/lib/db";
 import { useColorTransition } from "@/components/color-transition";
 
 interface ColorGridProps {
-  colors: ColorAlbum[];
+  colors: ColorTagGroup[];
 }
 
 // Mesmo delay em cascata do PhotoMasonry (components/photo-masonry.tsx) ao
@@ -52,7 +52,7 @@ export function ColorGrid({ colors }: ColorGridProps) {
   );
 }
 
-function ColorSwatch({ tag, index }: { tag: ColorAlbum["tag"]; index: number }) {
+function ColorSwatch({ tag, index }: { tag: ColorTagGroup["tag"]; index: number }) {
   const { trigger } = useColorTransition();
   const [clicked, setClicked] = useState(false);
   const href = `/cor/${encodeURIComponent(tag.name)}`;

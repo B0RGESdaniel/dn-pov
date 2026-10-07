@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { Photo, PhotosPage, Tag, TagCategory } from "@/types/photo";
-import { Album, ColorAlbum, CoverPhoto, PlaceAlbum } from "@/lib/db";
+import { TagGroup, ColorTagGroup, CoverPhoto, PlaceTagGroup } from "@/lib/db";
 import { decodePhotoCursor, encodePhotoCursor } from "@/lib/photo-cursor";
 
 // Fonte de dados 100% local pra testar as páginas sem gastar Turso/R2.
@@ -197,11 +197,11 @@ export function getMockMemories(): Photo[] {
   return photos.filter((photo) => photo.memory != null).sort((a, b) => b.id - a.id);
 }
 
-function getMockAlbums(): (Album & { covers: CoverPhoto[] })[] {
+function getMockTagGroups(): (TagGroup & { covers: CoverPhoto[] })[] {
   const { photos, tags } = buildMockState();
 
   return tags
-    .map((tag): (Album & { covers: CoverPhoto[] }) | null => {
+    .map((tag): (TagGroup & { covers: CoverPhoto[] }) | null => {
       const taggedPhotos = photos.filter((photo) =>
         photo.tags.some((photoTag) => photoTag.id === tag.id),
       );
@@ -222,35 +222,35 @@ function getMockAlbums(): (Album & { covers: CoverPhoto[] })[] {
         covers,
       };
     })
-    .filter((album): album is Album & { covers: CoverPhoto[] } => album !== null)
+    .filter((group): group is TagGroup & { covers: CoverPhoto[] } => group !== null)
     .sort(
       (a, b) =>
         a.tag.category.localeCompare(b.tag.category) || a.tag.name.localeCompare(b.tag.name),
     );
 }
 
-export function getMockPlaces(): PlaceAlbum[] {
-  return getMockAlbums()
-    .filter((album) => album.tag.category === "place" && album.tag.lat != null && album.tag.lon != null)
-    .map((album) => ({
-      ...album,
-      tag: album.tag as Tag & { lat: number; lon: number },
+export function getMockPlaces(): PlaceTagGroup[] {
+  return getMockTagGroups()
+    .filter((group) => group.tag.category === "place" && group.tag.lat != null && group.tag.lon != null)
+    .map((group) => ({
+      ...group,
+      tag: group.tag as Tag & { lat: number; lon: number },
     }))
     .sort((a, b) => a.tag.name.localeCompare(b.tag.name));
 }
 
-export function getMockColors(): ColorAlbum[] {
-  return getMockAlbums()
+export function getMockColors(): ColorTagGroup[] {
+  return getMockTagGroups()
     .filter(
-      (album) =>
-        album.tag.category === "color" &&
-        album.tag.colorBg != null &&
-        album.tag.colorAccent != null,
+      (group) =>
+        group.tag.category === "color" &&
+        group.tag.colorBg != null &&
+        group.tag.colorAccent != null,
     )
-    .map((album) => ({
-      tag: album.tag as Tag & { colorBg: string; colorAccent: string },
-      count: album.count,
-      covers: album.covers,
+    .map((group) => ({
+      tag: group.tag as Tag & { colorBg: string; colorAccent: string },
+      count: group.count,
+      covers: group.covers,
     }))
     .sort((a, b) => a.tag.name.localeCompare(b.tag.name));
 }
