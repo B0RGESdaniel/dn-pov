@@ -32,6 +32,7 @@ export default async function AdminFotosPage({
   const [{ photos, nextCursor }, tags] = await Promise.all([
     getPhotos({
       cursor: typeof cursor === "string" ? cursor : undefined,
+      limit: 50,
       place,
       color,
       edited,
