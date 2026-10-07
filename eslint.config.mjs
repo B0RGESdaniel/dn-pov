@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Gerado pelo build do @serwist/next (next.config.ts, swDest) — minificado,
+    // não é código-fonte.
+    "public/sw.js",
   ]),
 ]);
 
