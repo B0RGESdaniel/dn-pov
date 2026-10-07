@@ -239,6 +239,15 @@ export function getMockPlaces(): PlaceTagGroup[] {
     .sort((a, b) => a.tag.name.localeCompare(b.tag.name));
 }
 
+export function getMockPlaceByName(name: string, parentId: number | null): Tag | null {
+  const { tags } = buildMockState();
+  return (
+    tags.find(
+      (tag) => tag.category === "place" && tag.name === name && tag.parentId === parentId,
+    ) ?? null
+  );
+}
+
 export function getMockColors(): ColorTagGroup[] {
   return getMockTagGroups()
     .filter(

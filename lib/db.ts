@@ -57,30 +57,26 @@ export async function upsertTags(inputs: NewTagInput[]): Promise<Tag[]> {
       parentId == null ? [input.name, input.category] : [input.name, input.category, parentId];
 
     const existing = await db.execute({
-      sql: `SELECT id FROM tags WHERE name = ? AND category = ? AND ${whereParent}`,
+      sql: `SELECT id, lat, lon, color_bg, color_accent FROM tags WHERE name = ? AND category = ? AND ${whereParent}`,
       args: whereArgs,
     });
 
     if (existing.rows.length > 0) {
+      const row = existing.rows[0];
+      const id = row.id as number;
+      const lat = input.lat ?? (row.lat as number | null);
+      const lon = input.lon ?? (row.lon as number | null);
+      const colorBg = input.colorBg ?? (row.color_bg as string | null);
+      const colorAccent = input.colorAccent ?? (row.color_accent as string | null);
+
       await db.execute({
-        sql: `
-          UPDATE tags SET
-            lat = COALESCE(?, lat),
-            lon = COALESCE(?, lon),
-            color_bg = COALESCE(?, color_bg),
-            color_accent = COALESCE(?, color_accent)
-          WHERE id = ?
-        `,
-        args: [
-          input.lat ?? null,
-          input.lon ?? null,
-          input.colorBg ?? null,
-          input.colorAccent ?? null,
-          existing.rows[0].id,
-        ],
+        sql: `UPDATE tags SET lat = ?, lon = ?, color_bg = ?, color_accent = ? WHERE id = ?`,
+        args: [lat, lon, colorBg, colorAccent, id],
       });
+
+      tags.push({ id, name: input.name, category: input.category, parentId, lat, lon, colorBg, colorAccent });
     } else {
-      await db.execute({
+      const result = await db.execute({
         sql: `
           INSERT INTO tags (name, category, parent_id, lat, lon, color_bg, color_accent)
           VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -95,14 +91,18 @@ export async function upsertTags(inputs: NewTagInput[]): Promise<Tag[]> {
           input.colorAccent ?? null,
         ],
       });
+
+      tags.push({
+        id: Number(result.lastInsertRowid),
+        name: input.name,
+        category: input.category,
+        parentId,
+        lat: input.lat ?? null,
+        lon: input.lon ?? null,
+        colorBg: input.colorBg ?? null,
+        colorAccent: input.colorAccent ?? null,
+      });
     }
-
-    const result = await db.execute({
-      sql: `SELECT id, name, category, parent_id, lat, lon, color_bg, color_accent FROM tags WHERE name = ? AND category = ? AND ${whereParent}`,
-      args: whereArgs,
-    });
-
-    tags.push(rowToTag(result.rows[0] as unknown as Record<string, unknown>));
   }
 
   return tags;
@@ -197,6 +197,29 @@ export async function getPlaces(): Promise<PlaceTagGroup[]> {
     ...rest,
     cover: covers[0] ?? null,
   }));
+}
+
+// Busca direta de 1 local (país ou cidade) por nome + pai — usada pra validar
+// rota em /mapa/[pais] e /mapa/[pais]/[cidade] sem precisar carregar (e
+// calcular capa de) todas as tags de lugar via getPlaces().
+export async function getPlaceByName(
+  name: string,
+  parentId: number | null,
+): Promise<Tag | null> {
+  const whereParent = parentId == null ? "parent_id IS NULL" : "parent_id = ?";
+  const args = parentId == null ? [name] : [name, parentId];
+
+  const result = await db.execute({
+    sql: `
+      SELECT id, name, category, parent_id, lat, lon, color_bg, color_accent
+      FROM tags
+      WHERE name = ? AND category = 'place' AND ${whereParent}
+    `,
+    args,
+  });
+
+  if (result.rows.length === 0) return null;
+  return rowToTag(result.rows[0] as unknown as Record<string, unknown>);
 }
 
 export interface ColorTagGroup {
@@ -312,12 +335,12 @@ export async function updateTagById(input: UpdateTagInput): Promise<void> {
     });
   }
   if (newParentId != null) {
-    for (const photoId of photoIds) {
-      await db.execute({
+    await db.batch(
+      photoIds.map((photoId) => ({
         sql: `INSERT OR IGNORE INTO photo_tags (photo_id, tag_id) VALUES (?, ?)`,
         args: [photoId, newParentId],
-      });
-    }
+      })),
+    );
   }
 }
 
@@ -356,12 +379,13 @@ export async function insertPhoto(data: NewPhoto): Promise<number> {
 }
 
 export async function linkPhotoTags({ photoId, tagIds }: LinkPhotoTagsProps) {
-  for (const tagId of tagIds) {
-    await db.execute({
+  if (tagIds.length === 0) return;
+  await db.batch(
+    tagIds.map((tagId) => ({
       sql: `INSERT INTO photo_tags (photo_id, tag_id) VALUES (?, ?)`,
       args: [photoId, tagId],
-    });
-  }
+    })),
+  );
 }
 
 function rowToPhoto(row: Record<string, unknown>): Photo {

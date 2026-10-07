@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPhotos, getPlaces } from "@/lib/photos-source";
+import { getPhotos, getPlaceByName } from "@/lib/photos-source";
 import { TagTheme } from "@/components/tag-theme";
 import { PhotoMasonry } from "@/components/photo-masonry";
 
@@ -10,24 +10,19 @@ export default async function MapaCidadePage({
   const countryName = decodeURIComponent(pais);
   const cityName = decodeURIComponent(cidade);
 
-  const places = await getPlaces();
-  const country = places.find(
-    (item) => item.tag.name === countryName && item.tag.parentId === null,
-  );
+  const country = await getPlaceByName(countryName, null);
   if (!country) notFound();
 
   // Cidade buscada só dentro do país da URL — necessário porque cidades
   // homônimas em países diferentes são permitidas (ver lib/schema.sql).
-  const city = places.find(
-    (item) => item.tag.name === cityName && item.tag.parentId === country.tag.id,
-  );
+  const city = await getPlaceByName(cityName, country.id);
   if (!city) notFound();
 
   const initialPage = await getPhotos({ place: [cityName] });
 
   return (
     <>
-      <TagTheme colorBg={city.tag.colorBg} colorAccent={city.tag.colorAccent} />
+      <TagTheme colorBg={city.colorBg} colorAccent={city.colorAccent} />
       <div className="pt-16 sm:pt-20">
         <PhotoMasonry
           key={cityName}
