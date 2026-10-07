@@ -1,31 +1,31 @@
-"use client";
-
-import { useEffect } from "react";
-
 interface TagThemeProps {
   colorBg?: string | null;
   colorAccent?: string | null;
 }
 
+const SAFE_COLOR_RE = /^(#[0-9a-fA-F]{6}|var\(--[a-z-]+\))$/;
+
+function safeColor(value?: string | null) {
+  return value && SAFE_COLOR_RE.test(value) ? value : null;
+}
+
 // Retema a UI pras cores de um local/cor em foco (mesma técnica de CSS vars
-// de components/globe-map.tsx), sem exigir uma hero ou contexto entre rotas
-// — só aplica enquanto a página que a monta estiver na tela, e volta pro
-// tema padrão ao desmontar. `colorBg` e `colorAccent` são independentes
-// (ex.: /memorias só sobrescreve o accent, pra dar contraste no nav sobre o
-// fundo cortiça, sem mexer no --background do resto do app).
+// de components/globe-map.tsx), sem exigir uma hero ou contexto entre rotas.
+// Server Component (sem "use client"/useEffect) — a página já sabe a cor no
+// request, então sai como <style> inline já no HTML, sem flash do tema
+// padrão antes do primeiro paint. Some junto com a página ao navegar
+// (client-side), revertendo pro tema padrão sem precisar de cleanup manual.
 export function TagTheme({ colorBg, colorAccent }: TagThemeProps) {
-  useEffect(() => {
-    if (!colorBg && !colorAccent) return;
+  const bg = safeColor(colorBg);
+  const accent = safeColor(colorAccent);
+  if (!bg && !accent) return null;
 
-    const root = document.documentElement;
-    if (colorBg) root.style.setProperty("--background", colorBg);
-    if (colorAccent) root.style.setProperty("--accent", colorAccent);
+  const declarations = [
+    bg && `--background:${bg}`,
+    accent && `--accent:${accent}`,
+  ]
+    .filter(Boolean)
+    .join(";");
 
-    return () => {
-      if (colorBg) root.style.removeProperty("--background");
-      if (colorAccent) root.style.removeProperty("--accent");
-    };
-  }, [colorBg, colorAccent]);
-
-  return null;
+  return <style>{`:root{${declarations}}`}</style>;
 }
