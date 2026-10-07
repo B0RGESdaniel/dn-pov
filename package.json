@@ -27,7 +27,8 @@
     "react-dom": "19.2.8",
     "serwist": "^9.5.12",
     "sharp": "^0.35.3",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

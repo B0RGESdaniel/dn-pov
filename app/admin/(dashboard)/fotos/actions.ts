@@ -7,8 +7,12 @@ import {
   setPhotoTags,
   updatePhotoMeta,
 } from "@/lib/db";
+import { mapDbError } from "@/lib/validation/errors";
+import { updatePhotoSchema } from "@/lib/validation/photos";
 
-export type PhotoActionResult = { error: string } | { error?: undefined };
+export type PhotoActionResult =
+  | { error?: undefined; fieldErrors?: undefined }
+  | { error: string; fieldErrors?: Record<string, string[]> };
 
 function parseTagIds(formData: FormData): number[] {
   return formData
@@ -21,15 +25,24 @@ export async function updatePhoto(
   id: number,
   formData: FormData,
 ): Promise<PhotoActionResult> {
-  const memoryRaw = String(formData.get("memory") ?? "").trim();
-  const memory = memoryRaw === "" ? null : memoryRaw;
-  const edited = formData.get("edited") === "on";
+  const parsed = updatePhotoSchema.safeParse({
+    memory: formData.get("memory"),
+    edited: formData.get("edited") === "on",
+    tagIds: parseTagIds(formData),
+  });
+
+  if (!parsed.success) {
+    const { formErrors, fieldErrors } = parsed.error.flatten();
+    return { error: formErrors[0] ?? "Dados inválidos", fieldErrors };
+  }
+
+  const { memory, edited, tagIds } = parsed.data;
 
   try {
-    await updatePhotoMeta(id, { memory, edited });
-    await setPhotoTags(id, parseTagIds(formData));
-  } catch {
-    return { error: "Não foi possível salvar a foto" };
+    await updatePhotoMeta(id, { memory: memory === "" ? null : memory, edited });
+    await setPhotoTags(id, tagIds);
+  } catch (error) {
+    return { error: mapDbError(error) };
   }
 
   revalidatePath("/", "layout");
@@ -39,8 +52,8 @@ export async function updatePhoto(
 export async function deletePhotoAction(id: number): Promise<PhotoActionResult> {
   try {
     await deletePhotoFromDb(id);
-  } catch {
-    return { error: "Não foi possível excluir a foto" };
+  } catch (error) {
+    return { error: mapDbError(error) };
   }
 
   revalidatePath("/", "layout");

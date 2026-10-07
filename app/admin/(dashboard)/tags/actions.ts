@@ -6,42 +6,76 @@ import {
   updateTagById,
   upsertTags,
 } from "@/lib/db";
-import { TagCategory } from "@/types/photo";
+import { mapDbError } from "@/lib/validation/errors";
+import {
+  colorTagSchema,
+  pickTagContext,
+  placeCitySchema,
+  placeCountrySchema,
+} from "@/lib/validation/tags";
 
-export type TagActionResult = { error: string } | { error?: undefined };
+export type TagActionResult =
+  | { error?: undefined; fieldErrors?: undefined }
+  | { error: string; fieldErrors?: Record<string, string[]> };
 
-function parseOptionalNumber(value: FormDataEntryValue | null): number | null {
-  if (typeof value !== "string" || value.trim() === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function parseOptionalString(value: FormDataEntryValue | null): string | null {
-  if (typeof value !== "string" || value.trim() === "") return null;
-  return value.trim();
+function readTagFormRaw(formData: FormData) {
+  return {
+    name: formData.get("name"),
+    lat: formData.get("lat"),
+    lon: formData.get("lon"),
+    colorBg: formData.get("colorBg"),
+    colorAccent: formData.get("colorAccent"),
+  };
 }
 
 export async function createTag(formData: FormData): Promise<TagActionResult> {
-  const name = String(formData.get("name") ?? "").trim();
-  const category = String(formData.get("category") ?? "") as TagCategory;
+  const context = pickTagContext(formData);
+  const raw = readTagFormRaw(formData);
 
-  if (!name) return { error: "Nome é obrigatório" };
+  if (context === "color") {
+    const parsed = colorTagSchema.safeParse(raw);
+    if (!parsed.success) {
+      const { formErrors, fieldErrors } = parsed.error.flatten();
+      return { error: formErrors[0] ?? "Dados inválidos", fieldErrors };
+    }
+
+    try {
+      await upsertTags([{ ...parsed.data, category: "color", parentId: null }]);
+    } catch (error) {
+      return { error: mapDbError(error, context) };
+    }
+
+    revalidatePath("/", "layout");
+    return {};
+  }
+
+  if (context === "place-child") {
+    const parsed = placeCitySchema.safeParse({ ...raw, parentId: formData.get("parentId") });
+    if (!parsed.success) {
+      const { formErrors, fieldErrors } = parsed.error.flatten();
+      return { error: formErrors[0] ?? "Dados inválidos", fieldErrors };
+    }
+
+    try {
+      await upsertTags([{ ...parsed.data, category: "place" }]);
+    } catch (error) {
+      return { error: mapDbError(error, context) };
+    }
+
+    revalidatePath("/", "layout");
+    return {};
+  }
+
+  const parsed = placeCountrySchema.safeParse(raw);
+  if (!parsed.success) {
+    const { formErrors, fieldErrors } = parsed.error.flatten();
+    return { error: formErrors[0] ?? "Dados inválidos", fieldErrors };
+  }
 
   try {
-    await upsertTags([
-      {
-        name,
-        category,
-        // parentId só existe em "place" (país = null, cidade = id do país).
-        parentId: category === "place" ? parseOptionalNumber(formData.get("parentId")) : null,
-        lat: parseOptionalNumber(formData.get("lat")),
-        lon: parseOptionalNumber(formData.get("lon")),
-        colorBg: parseOptionalString(formData.get("colorBg")),
-        colorAccent: parseOptionalString(formData.get("colorAccent")),
-      },
-    ]);
-  } catch {
-    return { error: "Não foi possível criar a tag" };
+    await upsertTags([{ ...parsed.data, category: "place", parentId: null }]);
+  } catch (error) {
+    return { error: mapDbError(error, context) };
   }
 
   revalidatePath("/", "layout");
@@ -52,26 +86,56 @@ export async function updateTag(
   id: number,
   formData: FormData,
 ): Promise<TagActionResult> {
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: "Nome é obrigatório" };
+  const context = pickTagContext(formData);
+  const raw = readTagFormRaw(formData);
 
-  // Campo ausente (tags de cor não mandam parentId) = mantém o pai atual;
-  // presente (mesmo vazio, caso do país) = usa o valor explicitamente.
-  const rawParentId = formData.get("parentId");
-  const parentId = rawParentId === null ? undefined : parseOptionalNumber(rawParentId);
+  if (context === "color") {
+    const parsed = colorTagSchema.safeParse(raw);
+    if (!parsed.success) {
+      const { formErrors, fieldErrors } = parsed.error.flatten();
+      return { error: formErrors[0] ?? "Dados inválidos", fieldErrors };
+    }
+
+    try {
+      // Cor não tem hierarquia — omite parentId pra manter o atual (sempre null).
+      await updateTagById({ id, ...parsed.data });
+    } catch (error) {
+      return { error: mapDbError(error, context) };
+    }
+
+    revalidatePath("/", "layout");
+    return {};
+  }
+
+  if (context === "place-child") {
+    const parsed = placeCitySchema.safeParse({ ...raw, parentId: formData.get("parentId") });
+    if (!parsed.success) {
+      const { formErrors, fieldErrors } = parsed.error.flatten();
+      return { error: formErrors[0] ?? "Dados inválidos", fieldErrors };
+    }
+
+    try {
+      await updateTagById({ id, ...parsed.data });
+    } catch (error) {
+      return { error: mapDbError(error, context) };
+    }
+
+    revalidatePath("/", "layout");
+    return {};
+  }
+
+  const parsed = placeCountrySchema.safeParse(raw);
+  if (!parsed.success) {
+    const { formErrors, fieldErrors } = parsed.error.flatten();
+    return { error: formErrors[0] ?? "Dados inválidos", fieldErrors };
+  }
 
   try {
-    await updateTagById({
-      id,
-      name,
-      parentId,
-      lat: parseOptionalNumber(formData.get("lat")),
-      lon: parseOptionalNumber(formData.get("lon")),
-      colorBg: parseOptionalString(formData.get("colorBg")),
-      colorAccent: parseOptionalString(formData.get("colorAccent")),
-    });
-  } catch {
-    return { error: "Já existe uma tag com esse nome nessa categoria" };
+    // País nunca tem pai — explícito, pra garantir que não fique "órfão" de
+    // um parentId antigo caso o registro já tivesse um valor estranho.
+    await updateTagById({ id, ...parsed.data, parentId: null });
+  } catch (error) {
+    return { error: mapDbError(error, context) };
   }
 
   revalidatePath("/", "layout");

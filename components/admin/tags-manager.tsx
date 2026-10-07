@@ -247,13 +247,16 @@ function PlaceTagForm({
   const [isPending, startTransition] = useTransition();
   const [colorBg, setColorBg] = useState(tag?.colorBg ?? "");
   const [colorAccent, setColorAccent] = useState(tag?.colorAccent ?? "");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
   function handleSubmit(formData: FormData) {
     onError(null);
+    setFieldErrors({});
     startTransition(async () => {
       const result = tag ? await updateTag(tag.id, formData) : await createTag(formData);
       if (result?.error) {
         onError(result.error);
+        setFieldErrors(result.fieldErrors ?? {});
         return;
       }
       onDone();
@@ -279,17 +282,46 @@ function PlaceTagForm({
               </option>
             ))}
           </select>
+          {fieldErrors.parentId?.[0] && (
+            <span className="text-xs text-red-400">{fieldErrors.parentId[0]}</span>
+          )}
         </label>
       ) : (
         // País nunca tem pai — explícito (string vazia = NULL pro parseOptionalNumber).
         <input type="hidden" name="parentId" value="" />
       )}
 
-      <Field label="Nome" name="name" defaultValue={tag?.name} required />
-      <Field label="Lat" name="lat" type="number" step="any" defaultValue={tag?.lat ?? ""} />
-      <Field label="Lon" name="lon" type="number" step="any" defaultValue={tag?.lon ?? ""} />
-      <ColorField label="Cor fundo" name="colorBg" value={colorBg} onChange={setColorBg} />
-      <ColorField label="Cor accent" name="colorAccent" value={colorAccent} onChange={setColorAccent} />
+      <Field label="Nome" name="name" defaultValue={tag?.name} required error={fieldErrors.name?.[0]} />
+      <Field
+        label="Lat"
+        name="lat"
+        type="number"
+        step="any"
+        defaultValue={tag?.lat ?? ""}
+        error={fieldErrors.lat?.[0]}
+      />
+      <Field
+        label="Lon"
+        name="lon"
+        type="number"
+        step="any"
+        defaultValue={tag?.lon ?? ""}
+        error={fieldErrors.lon?.[0]}
+      />
+      <ColorField
+        label="Cor fundo"
+        name="colorBg"
+        value={colorBg}
+        onChange={setColorBg}
+        error={fieldErrors.colorBg?.[0]}
+      />
+      <ColorField
+        label="Cor accent"
+        name="colorAccent"
+        value={colorAccent}
+        onChange={setColorAccent}
+        error={fieldErrors.colorAccent?.[0]}
+      />
       <ContrastPreview bg={colorBg} accent={colorAccent} />
 
       <button
@@ -317,14 +349,17 @@ function ColorTagsSection({ tags }: { tags: TagWithUsage[] }) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [colorBg, setColorBg] = useState("");
   const [colorAccent, setColorAccent] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const handleDelete = makeDeleteHandler(startTransition, setError);
 
   function handleCreate(formData: FormData) {
     setError(null);
+    setFieldErrors({});
     startTransition(async () => {
       const result = await createTag(formData);
       if (result?.error) {
         setError(result.error);
+        setFieldErrors(result.fieldErrors ?? {});
         return;
       }
       // colorBg/colorAccent são controlados (pro preview de contraste), então
@@ -384,9 +419,21 @@ function ColorTagsSection({ tags }: { tags: TagWithUsage[] }) {
 
       <form action={handleCreate} className="flex flex-wrap items-end gap-2">
         <input type="hidden" name="category" value="color" />
-        <Field label="Nome" name="name" required />
-        <ColorField label="Cor fundo" name="colorBg" value={colorBg} onChange={setColorBg} />
-        <ColorField label="Cor accent" name="colorAccent" value={colorAccent} onChange={setColorAccent} />
+        <Field label="Nome" name="name" required error={fieldErrors.name?.[0]} />
+        <ColorField
+          label="Cor fundo"
+          name="colorBg"
+          value={colorBg}
+          onChange={setColorBg}
+          error={fieldErrors.colorBg?.[0]}
+        />
+        <ColorField
+          label="Cor accent"
+          name="colorAccent"
+          value={colorAccent}
+          onChange={setColorAccent}
+          error={fieldErrors.colorAccent?.[0]}
+        />
         <ContrastPreview bg={colorBg} accent={colorAccent} />
         <button
           type="submit"
@@ -414,13 +461,16 @@ function ColorEditRow({
   const [isPending, startTransition] = useTransition();
   const [colorBg, setColorBg] = useState(tag.colorBg ?? "");
   const [colorAccent, setColorAccent] = useState(tag.colorAccent ?? "");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
   function handleSubmit(formData: FormData) {
     onError(null);
+    setFieldErrors({});
     startTransition(async () => {
       const result = await updateTag(tag.id, formData);
       if (result?.error) {
         onError(result.error);
+        setFieldErrors(result.fieldErrors ?? {});
         return;
       }
       onDone();
@@ -430,9 +480,21 @@ function ColorEditRow({
   return (
     <li className="rounded-md border border-border bg-surface px-3 py-2">
       <form action={handleSubmit} className="flex flex-wrap items-end gap-2">
-        <Field label="Nome" name="name" defaultValue={tag.name} required />
-        <ColorField label="Cor fundo" name="colorBg" value={colorBg} onChange={setColorBg} />
-        <ColorField label="Cor accent" name="colorAccent" value={colorAccent} onChange={setColorAccent} />
+        <Field label="Nome" name="name" defaultValue={tag.name} required error={fieldErrors.name?.[0]} />
+        <ColorField
+          label="Cor fundo"
+          name="colorBg"
+          value={colorBg}
+          onChange={setColorBg}
+          error={fieldErrors.colorBg?.[0]}
+        />
+        <ColorField
+          label="Cor accent"
+          name="colorAccent"
+          value={colorAccent}
+          onChange={setColorAccent}
+          error={fieldErrors.colorAccent?.[0]}
+        />
         <ContrastPreview bg={colorBg} accent={colorAccent} />
         <button
           type="submit"
@@ -483,6 +545,7 @@ function Field({
   required,
   step,
   placeholder,
+  error,
 }: {
   label: string;
   name: string;
@@ -491,6 +554,7 @@ function Field({
   required?: boolean;
   step?: string;
   placeholder?: string;
+  error?: string;
 }): ReactNode {
   return (
     <label className="flex flex-col gap-1 text-xs text-muted">
@@ -504,6 +568,7 @@ function Field({
         placeholder={placeholder}
         className="h-9 w-32 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:border-accent"
       />
+      {error && <span className="text-xs text-red-400">{error}</span>}
     </label>
   );
 }
@@ -519,11 +584,13 @@ function ColorField({
   name,
   value,
   onChange,
+  error,
 }: {
   label: string;
   name: string;
   value: string;
   onChange: (value: string) => void;
+  error?: string;
 }): ReactNode {
   // input[type=color] exige um hex de 6 dígitos válido — enquanto o texto
   // não chegar nesse formato (vazio, incompleto, inválido), o seletor cai
@@ -550,6 +617,7 @@ function ColorField({
           className="h-9 w-24 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:border-accent"
         />
       </span>
+      {error && <span className="text-xs text-red-400">{error}</span>}
     </label>
   );
 }
