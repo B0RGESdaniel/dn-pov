@@ -607,7 +607,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
                     event.preventDefault();
                     triggerZoomTransition(mapaHref(activePlace, places));
                   }}
-                  className="rounded-full border border-accent bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:bg-accent hover:text-background"
+                  className="rounded-full border border-accent bg-accent px-8 py-3 font-mono text-sm uppercase tracking-widest text-background transition-opacity duration-300 hover:opacity-90"
                 >
                   Explorar
                 </Link>
@@ -616,7 +616,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
                   <button
                     type="button"
                     onClick={() => enterCityLevel(activePlace)}
-                    className="rounded-full border border-accent/30 bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:border-accent hover:bg-accent hover:text-background"
+                    className="rounded-full border border-accent bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:bg-accent hover:text-background"
                   >
                     Ver cidades
                   </button>
@@ -626,7 +626,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
                   <button
                     type="button"
                     onClick={exitToCountryLevel}
-                    className="rounded-full border border-accent/30 bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:border-accent hover:bg-accent hover:text-background"
+                    className="rounded-full border border-accent bg-transparent px-8 py-3 font-mono text-sm uppercase tracking-widest text-accent transition-colors duration-300 hover:bg-accent hover:text-background"
                   >
                     Voltar
                   </button>
