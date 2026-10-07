@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
 } from "react";
 import { Photo } from "@/types/photo";
 
@@ -66,6 +67,10 @@ export function Lightbox({
 
   if (!photo) return null;
 
+  const nextPhoto = photos.length > 1 ? photos[(index + 1) % photos.length] : null;
+  const prevPhoto =
+    photos.length > 1 ? photos[(index - 1 + photos.length) % photos.length] : null;
+
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur">
       <div
@@ -76,18 +81,17 @@ export function Lightbox({
           pointerStartRef.current = null;
         }}
       >
-        <div key={photo.id} className="lightbox-photo relative h-full w-full">
-          <Image
-            src={photo.url}
-            alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
-            fill
-            className="object-contain"
-            sizes="100vw"
-            placeholder={photo.blurDataUrl ? "blur" : undefined}
-            blurDataURL={photo.blurDataUrl ?? undefined}
-            priority
-          />
-        </div>
+        <LightboxPhoto key={photo.id} photo={photo} priority />
+      </div>
+
+      {/* Pré-carrega vizinhas fora de tela, pra trocar de foto ser instantâneo. */}
+      <div className="absolute h-px w-px overflow-hidden opacity-0" aria-hidden>
+        {nextPhoto && nextPhoto.id !== photo.id && (
+          <Image src={nextPhoto.url} alt="" fill unoptimized loading="eager" />
+        )}
+        {prevPhoto && prevPhoto.id !== photo.id && prevPhoto.id !== nextPhoto?.id && (
+          <Image src={prevPhoto.url} alt="" fill unoptimized loading="eager" />
+        )}
       </div>
 
       {/* Sobreposto à foto (não ocupa espaço em layout), sempre visível. */}
@@ -110,6 +114,38 @@ export function Lightbox({
           ✕
         </button>
       </div>
+    </div>
+  );
+}
+
+function LightboxPhoto({ photo, priority }: { photo: Photo; priority?: boolean }) {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <div className="lightbox-photo relative h-full w-full">
+      {photo.blurDataUrl && (
+        <div
+          aria-hidden
+          className={`absolute inset-0 transition-opacity duration-300 ${
+            loaded ? "opacity-0" : "opacity-100"
+          }`}
+          style={{
+            backgroundImage: `url(${photo.blurDataUrl})`,
+            backgroundSize: "contain",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+      )}
+      <Image
+        src={photo.url}
+        alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
+        fill
+        unoptimized
+        className="object-contain"
+        priority={priority}
+        onLoad={() => setLoaded(true)}
+      />
     </div>
   );
 }
