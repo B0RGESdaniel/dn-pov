@@ -11,6 +11,8 @@ interface LinkPhotoTagsProps {
 interface GetPhotosProps {
   place?: string[];
   color?: string[];
+  edited?: boolean;
+  hasMemory?: boolean;
   cursor?: string;
   limit?: number;
 }
@@ -167,6 +169,8 @@ function categoryFilterClause(
 export async function getPhotos({
   place,
   color,
+  edited,
+  hasMemory,
   cursor,
   limit = 20,
 }: GetPhotosProps): Promise<PhotosPage> {
@@ -190,6 +194,15 @@ export async function getPhotos({
       conditions.push(filter.clause);
       args.push(...filter.args);
     }
+  }
+
+  if (edited !== undefined) {
+    conditions.push(`photos.edited = ?`);
+    args.push(edited ? 1 : 0);
+  }
+
+  if (hasMemory !== undefined) {
+    conditions.push(hasMemory ? `photos.memory IS NOT NULL` : `photos.memory IS NULL`);
   }
 
   args.push(limit + 1);

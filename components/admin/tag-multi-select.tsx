@@ -29,12 +29,17 @@ export function TagMultiSelect({
   category,
   tags,
   defaultSelectedIds,
+  valueField = "id",
 }: {
   name: string;
   label: string;
   category: TagCategory;
   tags: Tag[];
   defaultSelectedIds: number[];
+  // "id" (padrão) é o que a edição de foto grava em photo_tags; "name" é o
+  // que o filtro de /admin/fotos usa, pra bater com o place/color (string[])
+  // que getPhotos já aceita — mesmo contrato do /api/photos público.
+  valueField?: "id" | "name";
 }) {
   const [selected, setSelected] = useState<Set<number>>(
     new Set(defaultSelectedIds),
@@ -109,7 +114,12 @@ export function TagMultiSelect({
         </Command>
       </PopoverContent>
       {selectedTags.map((tag) => (
-        <input key={tag.id} type="hidden" name={name} value={tag.id} />
+        <input
+          key={tag.id}
+          type="hidden"
+          name={name}
+          value={valueField === "name" ? tag.name : tag.id}
+        />
       ))}
     </Popover>
   );
