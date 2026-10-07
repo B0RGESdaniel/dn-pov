@@ -86,6 +86,7 @@ export function PhotoMasonry({
   const [photos, setPhotos] = useState(initialPhotos);
   const [cursor, setCursor] = useState(initialCursor);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -125,6 +126,7 @@ export function PhotoMasonry({
   const loadMore = useCallback(() => {
     if (!cursor || isLoadingMore) return;
     setIsLoadingMore(true);
+    setLoadError(false);
 
     const params = new URLSearchParams();
     if (filters?.place?.length) params.set("place", filters.place.join(","));
@@ -132,11 +134,15 @@ export function PhotoMasonry({
     params.set("cursor", cursor);
 
     fetch(`/api/photos?${params.toString()}`)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error(`status ${response.status}`);
+        return response.json();
+      })
       .then((page: PhotosPage) => {
         setPhotos((prev) => [...prev, ...page.photos]);
         setCursor(page.nextCursor);
       })
+      .catch(() => setLoadError(true))
       .finally(() => setIsLoadingMore(false));
   }, [filters, cursor, isLoadingMore]);
 
@@ -208,6 +214,21 @@ export function PhotoMasonry({
         <p className="py-6 text-center font-mono text-[9px] uppercase tracking-widest text-muted">
           carregando…
         </p>
+      )}
+
+      {loadError && !isLoadingMore && (
+        <div className="flex flex-col items-center gap-2 py-6">
+          <p className="text-center font-mono text-[9px] uppercase tracking-widest text-muted">
+            erro ao carregar mais fotos
+          </p>
+          <button
+            type="button"
+            onClick={loadMore}
+            className="font-mono text-[9px] uppercase tracking-widest text-accent underline"
+          >
+            tentar de novo
+          </button>
+        </div>
       )}
 
       {lightboxIndex !== null && (
