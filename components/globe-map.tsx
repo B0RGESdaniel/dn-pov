@@ -484,7 +484,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
       ) : (
         <div className="relative flex flex-1 flex-col overflow-hidden">
           <div className="shrink-0 pt-24 sm:pt-32">
-            <div className="relative h-20 overflow-hidden sm:h-28 md:h-32">
+            <div className="relative h-24 overflow-hidden sm:h-32 md:h-40">
               <AnimatePresence
                 custom={slideDirectionRef.current}
                 initial={false}
@@ -499,7 +499,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
                     exit="exit"
                     transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
                     onClick={() => focusPlace(place)}
-                    className={`absolute inset-0 flex items-center justify-center whitespace-nowrap px-4 text-center font-display tracking-tight transition-colors duration-500 text-4xl sm:text-6xl md:text-7xl ${
+                    className={`absolute inset-0 flex items-center justify-center px-4 text-center font-display leading-tight tracking-tight transition-colors duration-500 text-4xl sm:text-6xl md:text-7xl ${
                       offset === 0
                         ? "z-10 text-accent"
                         : "text-accent/30 hover:text-accent/60"
