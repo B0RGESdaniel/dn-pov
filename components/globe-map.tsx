@@ -476,7 +476,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
           );
 
   return (
-    <div className="flex h-[100svh] flex-col">
+    <div className="flex h-svh flex-col">
       {visiblePlaces.length === 0 ? (
         <p className="flex flex-1 items-center justify-center p-8 text-center font-mono text-xs uppercase tracking-widest text-muted">
           nenhum local com coordenadas ainda

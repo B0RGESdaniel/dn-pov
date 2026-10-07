@@ -52,7 +52,13 @@ export function ColorGrid({ colors }: ColorGridProps) {
   );
 }
 
-function ColorSwatch({ tag, index }: { tag: ColorTagGroup["tag"]; index: number }) {
+function ColorSwatch({
+  tag,
+  index,
+}: {
+  tag: ColorTagGroup["tag"];
+  index: number;
+}) {
   const { trigger } = useColorTransition();
   const [clicked, setClicked] = useState(false);
   const href = `/cor/${encodeURIComponent(tag.name)}`;
@@ -62,7 +68,11 @@ function ColorSwatch({ tag, index }: { tag: ColorTagGroup["tag"]; index: number 
       initial={{ opacity: 0, y: -60 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.5, ease: "easeOut", delay: index * STAGGER_STEP }}
+      transition={{
+        duration: 0.5,
+        ease: "easeOut",
+        delay: index * STAGGER_STEP,
+      }}
     >
       <Link
         href={href}
@@ -70,14 +80,23 @@ function ColorSwatch({ tag, index }: { tag: ColorTagGroup["tag"]; index: number 
           // Cliques com modificador (nova aba, etc.) seguem o comportamento
           // nativo do Link — só interceptamos o clique "normal" pra tocar a
           // animação antes de navegar de verdade.
-          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+          if (
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          ) {
             return;
           }
           event.preventDefault();
           setClicked(true);
-          trigger(event.currentTarget.getBoundingClientRect(), tag.colorBg, href);
+          trigger(
+            event.currentTarget.getBoundingClientRect(),
+            tag.colorBg,
+            href,
+          );
         }}
-        className="relative flex aspect-square items-center justify-center overflow-hidden rounded-sm border-2 border-black shadow-[8px_8px_0_0_#000] transition-all duration-150 hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-[4px_4px_0_0_#000]"
+        className="relative flex aspect-square items-center justify-center overflow-hidden rounded-sm border-2 border-black shadow-[8px_8px_0_0_#000] transition-all duration-150 hover:translate-x-1 hover:translate-y-1 hover:shadow-[4px_4px_0_0_#000]"
         style={{ backgroundColor: tag.colorBg, cursor: COLOR_PICKER_CURSOR }}
       >
         <span

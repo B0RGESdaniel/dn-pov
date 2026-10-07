@@ -135,7 +135,7 @@ function RollingNavLink({
         isActive ? "bg-accent text-background" : "text-accent hover:text-accent"
       } ${
         neobrutalist && isActive
-          ? "border-2 border-black !transition-all !duration-150 shadow-[3px_3px_0_0_#000] hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[1.5px_1.5px_0_0_#000]"
+          ? "border-2 border-black transition-all! duration-150! shadow-[3px_3px_0_0_#000] hover:translate-x-[1.5px] hover:translate-y-[1.5px] hover:shadow-[1.5px_1.5px_0_0_#000]"
           : ""
       }`}
     >
@@ -203,7 +203,7 @@ export function SiteNav() {
     : null;
 
   return (
-    <nav className="absolute top-0 z-20 flex w-full items-center gap-1 overflow-x-auto px-3 py-3 [scrollbar-width:none] sm:gap-2 sm:px-6 [&::-webkit-scrollbar]:hidden">
+    <nav className="absolute top-0 z-20 flex w-full items-center gap-1 overflow-x-auto px-3 py-3 scrollbar-none sm:gap-2 sm:px-6 [&::-webkit-scrollbar]:hidden">
       <Link
         href="/"
         className="mr-3 shrink-0 text-accent transition-colors duration-500 sm:mr-4"
