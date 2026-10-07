@@ -7,6 +7,7 @@ import {
   deletePhotoAction,
   updatePhoto,
 } from "@/app/admin/(dashboard)/fotos/actions";
+import { TagMultiSelect } from "@/components/admin/tag-multi-select";
 
 const CATEGORY_LABELS: Record<TagCategory, string> = {
   place: "Local",
@@ -26,7 +27,7 @@ export function PhotoEditForm({
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const selectedTagIds = new Set(photo.tags.map((tag) => tag.id));
+  const selectedTagIds = photo.tags.map((tag) => tag.id);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -79,27 +80,14 @@ export function PhotoEditForm({
                 <legend className="mb-2 text-xs uppercase tracking-wide text-muted">
                   {CATEGORY_LABELS[category]}
                 </legend>
-                <div className="flex flex-wrap gap-2">
-                  {categoryTags.length === 0 && (
-                    <p className="text-sm text-muted">
-                      Nenhuma tag cadastrada.
-                    </p>
+                <TagMultiSelect
+                  name="tagIds"
+                  label={CATEGORY_LABELS[category]}
+                  tags={categoryTags}
+                  defaultSelectedIds={selectedTagIds.filter((id) =>
+                    categoryTags.some((tag) => tag.id === id),
                   )}
-                  {categoryTags.map((tag) => (
-                    <label
-                      key={tag.id}
-                      className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-2 py-1 text-sm text-foreground"
-                    >
-                      <input
-                        type="checkbox"
-                        name="tagIds"
-                        value={tag.id}
-                        defaultChecked={selectedTagIds.has(tag.id)}
-                      />
-                      {tag.name}
-                    </label>
-                  ))}
-                </div>
+                />
               </fieldset>
             );
           })}
