@@ -83,6 +83,7 @@ export function PhotoEditForm({
                 <TagMultiSelect
                   name="tagIds"
                   label={CATEGORY_LABELS[category]}
+                  category={category}
                   tags={categoryTags}
                   defaultSelectedIds={selectedTagIds.filter((id) =>
                     categoryTags.some((tag) => tag.id === id),

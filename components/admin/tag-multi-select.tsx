@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { Tag } from "@/types/photo";
+import { Tag, TagCategory } from "@/types/photo";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -14,14 +14,25 @@ import {
   CommandList,
 } from "@/components/ui/command";
 
+function ColorSwatch({ color }: { color: string | null }) {
+  return (
+    <span
+      className="size-3 shrink-0 rounded-full border border-border"
+      style={{ backgroundColor: color ?? "transparent" }}
+    />
+  );
+}
+
 export function TagMultiSelect({
   name,
   label,
+  category,
   tags,
   defaultSelectedIds,
 }: {
   name: string;
   label: string;
+  category: TagCategory;
   tags: Tag[];
   defaultSelectedIds: number[];
 }) {
@@ -39,6 +50,17 @@ export function TagMultiSelect({
   }
 
   const selectedTags = tags.filter((tag) => selected.has(tag.id));
+
+  // Em "local" as tags são divididas em país (parentId null) e cidade —
+  // separadas em duas seções pra não misturar os dois níveis da hierarquia.
+  // Em "cor" não há agrupamento, só o swatch de colorBg ao lado do nome.
+  const groups =
+    category === "place"
+      ? [
+          { heading: "Países", items: tags.filter((tag) => tag.parentId === null) },
+          { heading: "Cidades", items: tags.filter((tag) => tag.parentId !== null) },
+        ]
+      : [{ heading: label, items: tags }];
 
   return (
     <Popover>
@@ -60,23 +82,29 @@ export function TagMultiSelect({
           <CommandInput placeholder={`Buscar ${label.toLowerCase()}...`} />
           <CommandList>
             <CommandEmpty>Nenhuma tag encontrada.</CommandEmpty>
-            <CommandGroup>
-              {tags.map((tag) => (
-                <CommandItem
-                  key={tag.id}
-                  value={tag.name}
-                  onSelect={() => toggle(tag.id)}
-                >
-                  <Check
-                    className={cn(
-                      "size-4",
-                      selected.has(tag.id) ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  {tag.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {groups.map(
+              (group) =>
+                group.items.length > 0 && (
+                  <CommandGroup key={group.heading} heading={group.heading}>
+                    {group.items.map((tag) => (
+                      <CommandItem
+                        key={tag.id}
+                        value={tag.name}
+                        onSelect={() => toggle(tag.id)}
+                      >
+                        <Check
+                          className={cn(
+                            "size-4 shrink-0",
+                            selected.has(tag.id) ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        {category === "color" && <ColorSwatch color={tag.colorBg} />}
+                        <span className="truncate">{tag.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                ),
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
