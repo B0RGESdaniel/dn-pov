@@ -447,13 +447,15 @@ export function GlobeMap({ places }: GlobeMapProps) {
   // local, e manter o -1 (em vez do 0) deixava o nome deslocado pra
   // esquerda e com opacidade reduzida (estilo dos slots não-centrais).
   const slotOffsetByPlaceId = new Map<number, number>();
-  for (const offset of [0, -1, 1]) {
-    const place =
-      visiblePlaces[
-        (baseIndex + offset + visiblePlaces.length) % visiblePlaces.length
-      ];
-    if (!slotOffsetByPlaceId.has(place.tag.id)) {
-      slotOffsetByPlaceId.set(place.tag.id, offset);
+  if (visiblePlaces.length > 0) {
+    for (const offset of [0, -1, 1]) {
+      const place =
+        visiblePlaces[
+          (baseIndex + offset + visiblePlaces.length) % visiblePlaces.length
+        ];
+      if (!slotOffsetByPlaceId.has(place.tag.id)) {
+        slotOffsetByPlaceId.set(place.tag.id, offset);
+      }
     }
   }
   const trackSlots =
@@ -476,7 +478,7 @@ export function GlobeMap({ places }: GlobeMapProps) {
   return (
     <div className="flex h-[100svh] flex-col">
       {visiblePlaces.length === 0 ? (
-        <p className="flex-1 p-8 text-center font-mono text-xs uppercase tracking-widest text-muted">
+        <p className="flex flex-1 items-center justify-center p-8 text-center font-mono text-xs uppercase tracking-widest text-muted">
           nenhum local com coordenadas ainda
         </p>
       ) : (
