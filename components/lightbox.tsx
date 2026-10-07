@@ -1,7 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef } from "react";
+import {
+  PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { Photo } from "@/types/photo";
 
 interface LightboxProps {
@@ -13,7 +18,12 @@ interface LightboxProps {
 
 const SWIPE_THRESHOLD = 50; // px horizontal mínimo pra virar navegação
 
-export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) {
+export function Lightbox({
+  photos,
+  index,
+  onClose,
+  onNavigate,
+}: LightboxProps) {
   const photo = photos[index];
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -59,23 +69,19 @@ export function Lightbox({ photos, index, onClose, onNavigate }: LightboxProps) 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur">
       <div
-        className="absolute inset-0 touch-none p-4"
+        className="absolute inset-0 touch-none p-1"
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerCancel={() => {
           pointerStartRef.current = null;
         }}
       >
-        <div
-          key={photo.id}
-          className="lightbox-photo relative flex h-full w-full items-center justify-center"
-        >
+        <div key={photo.id} className="lightbox-photo relative h-full w-full">
           <Image
             src={photo.url}
             alt={photo.tags.map((tag) => tag.name).join(", ") || "Foto"}
-            width={photo.width ?? 1600}
-            height={photo.height ?? 1600}
-            className="h-auto max-h-full w-auto max-w-full"
+            fill
+            className="object-contain"
             sizes="100vw"
             placeholder={photo.blurDataUrl ? "blur" : undefined}
             blurDataURL={photo.blurDataUrl ?? undefined}
