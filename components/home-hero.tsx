@@ -1,6 +1,7 @@
 "use client";
 
 import { CSSProperties, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Lock } from "lucide-react";
 import { motion } from "motion/react";
@@ -289,10 +290,12 @@ export function HomeHero() {
                 />
               )}
               {destination.href === "/mapa" && (
-                <img
+                <Image
                   src="/earth.svg"
                   alt=""
                   aria-hidden="true"
+                  width={95}
+                  height={95}
                   className="pointer-events-none absolute bottom-0 left-1/2 w-40 -translate-x-1/2 translate-y-[65%]"
                 />
               )}
