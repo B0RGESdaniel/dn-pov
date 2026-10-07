@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { PlaceTagGroup } from "@/lib/db";
+import { PlaceTagGroup } from "@/lib/db/tags";
 import { useZoomTransition } from "@/components/zoom-transition";
 
 interface GlobeMapProps {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { upsertTags, NewTagInput } from "../lib/db";
+import { upsertTags, NewTagInput } from "../lib/db/tags";
 
 // Fonte única das duas cores (base escura + clara pro texto) de cada tag de
 // cor. Rode com `npm run seed-colors` toda vez que adicionar uma cor nova ou

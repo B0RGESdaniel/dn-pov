@@ -7,7 +7,8 @@ import path from "path";
 import sharp from "sharp";
 import * as p from "@clack/prompts";
 import { uploadObject } from "../lib/r2";
-import { getTags, insertPhoto, upsertTags, linkPhotoTags, NewTagInput } from "../lib/db";
+import { getTags, upsertTags, NewTagInput } from "../lib/db/tags";
+import { insertPhoto, linkPhotoTags } from "../lib/db/photos";
 
 const NEW_OPTION = "__new__";
 const NONE_OPTION = "__none__";

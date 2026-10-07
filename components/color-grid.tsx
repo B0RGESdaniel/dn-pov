@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { ColorTagGroup } from "@/lib/db";
+import { ColorTagGroup } from "@/lib/db/tags";
 import { useColorTransition } from "@/components/color-transition";
 
 interface ColorGridProps {

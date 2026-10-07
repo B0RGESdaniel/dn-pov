@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { Photo, PhotosPage, Tag, TagCategory } from "@/types/photo";
-import { TagGroup, ColorTagGroup, CoverPhoto, PlaceTagGroup } from "@/lib/db";
+import { TagGroup, ColorTagGroup, CoverPhoto, PlaceTagGroup } from "@/lib/db/tags";
 import { decodePhotoCursor, encodePhotoCursor } from "@/lib/photo-cursor";
 
 // Fonte de dados 100% local pra testar as páginas sem gastar Turso/R2.
@@ -162,7 +162,7 @@ export function getMockPhotos({
     return check(place, "place") && check(color, "color");
   });
 
-  // Mesma ordem/cursor de lib/db.ts::getPhotos: (sort_key, id) como par de
+  // Mesma ordem/cursor de lib/db/photos.ts::getPhotos: (sort_key, id) como par de
   // comparação — ver lib/photo-cursor.ts.
   const sorted = [...filtered].sort((a, b) => {
     const aKey = mockSortKey(a.id);

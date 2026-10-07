@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import * as p from "@clack/prompts";
-import { db } from "../lib/db";
+import { db } from "../lib/db/client";
 import { r2 } from "../lib/r2";
 
 p.intro("Apagar todas as fotos — dn-pov");

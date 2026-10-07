@@ -1,11 +1,13 @@
 import {
   getColors as getRealGetColors,
-  getMemories as getRealGetMemories,
-  getPhotos as getRealGetPhotos,
   getPlaceByName as getRealGetPlaceByName,
   getPlaces as getRealGetPlaces,
   getTags as getRealGetTags,
-} from "@/lib/db";
+} from "@/lib/db/tags";
+import {
+  getMemories as getRealGetMemories,
+  getPhotos as getRealGetPhotos,
+} from "@/lib/db/photos";
 import {
   getMockColors,
   getMockMemories,

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getPhotos } from "@/lib/db";
+import { getPhotos } from "@/lib/db/photos";
 
 // Admin sempre lê o banco ao vivo — nada de prerender em build time aqui.
 export const dynamic = "force-dynamic";

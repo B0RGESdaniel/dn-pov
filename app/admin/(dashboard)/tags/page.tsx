@@ -1,4 +1,4 @@
-import { getTagsWithUsage } from "@/lib/db";
+import { getTagsWithUsage } from "@/lib/db/tags";
 import { TagsManager } from "@/components/admin/tags-manager";
 
 // Admin sempre lê o banco ao vivo — nada de prerender em build time aqui.

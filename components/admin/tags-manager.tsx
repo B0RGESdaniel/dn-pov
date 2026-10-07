@@ -2,7 +2,7 @@
 
 import { ChevronRight } from "lucide-react";
 import { ReactNode, useState, useTransition } from "react";
-import { TagWithUsage } from "@/lib/db";
+import { TagWithUsage } from "@/lib/db/tags";
 import {
   createTag,
   deleteTagAction,
@@ -228,7 +228,7 @@ function PlaceTagsSection({ tags }: { tags: TagWithUsage[] }) {
 }
 
 // Formulário único pra país e cidade — só a cidade mostra o seletor de país
-// (reatribuir move a cidade, ver updateTagById em lib/db.ts).
+// (reatribuir move a cidade, ver updateTagById em lib/db/tags.ts).
 function PlaceTagForm({
   tag,
   level,

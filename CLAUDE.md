@@ -89,7 +89,7 @@ Nunca mexe no código do site nem exige redeploy. Não existe upload via web —
 
 - `GET /api/photos?place=rio&color=azul&cursor=...` — retorna página de fotos filtradas por tag, paginação cursor-based (não offset), com cache na edge (`Cache-Control` público)
 - Cada categoria (`place`/`color`) é um parâmetro próprio: múltiplos valores na mesma categoria se combinam por **OR**; categorias diferentes se combinam por **AND**
-- Filtro por tag é feito via `EXISTS` no SQL (`lib/db.ts`), não em memória
+- Filtro por tag é feito via `EXISTS` no SQL (`lib/db/photos.ts`), não em memória
 
 ## Front-end
 
@@ -104,7 +104,7 @@ Nunca mexe no código do site nem exige redeploy. Não existe upload via web —
 
 - TypeScript estrito, sem `any`
 - Server Components por padrão; `"use client"` só onde precisa de interatividade (lightbox, filtro de tags, infinite scroll, nav ativa)
-- Queries SQL isoladas em `lib/db.ts`, nunca inline nos componentes
+- Queries SQL isoladas em `lib/db/` (dividido por domínio: `tags.ts`, `photos.ts`, `client.ts` para a conexão), nunca inline nos componentes
 - Variáveis de ambiente (`TURSO_*`, `R2_*`) sempre via `.env.local`, nunca commitadas
 
 ## Roadmap

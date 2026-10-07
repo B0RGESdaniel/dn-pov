@@ -6,7 +6,7 @@ import {
   deletePhoto as deletePhotoFromDb,
   setPhotoTags,
   updatePhotoMeta,
-} from "@/lib/db";
+} from "@/lib/db/photos";
 import { mapDbError } from "@/lib/validation/errors";
 import { updatePhotoSchema } from "@/lib/validation/photos";
 

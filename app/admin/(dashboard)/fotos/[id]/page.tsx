@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { getPhotoById, getTags } from "@/lib/db";
+import { getPhotoById } from "@/lib/db/photos";
+import { getTags } from "@/lib/db/tags";
 import { PhotoEditForm } from "@/components/admin/photo-edit-form";
 
 export const dynamic = "force-dynamic";

@@ -5,7 +5,7 @@ import {
   deleteTag as deleteTagFromDb,
   updateTagById,
   upsertTags,
-} from "@/lib/db";
+} from "@/lib/db/tags";
 import { mapDbError } from "@/lib/validation/errors";
 import {
   colorTagSchema,
